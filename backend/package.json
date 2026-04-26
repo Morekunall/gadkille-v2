@@ -1,0 +1,26 @@
+{
+  "name": "gadkille-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Gadkille fort tourism platform",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed:raigad": "node src/seeds/seedRaigad.js",
+    "seed:admin": "node src/seeds/seedAdmin.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "express-async-handler": "^1.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.4",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
