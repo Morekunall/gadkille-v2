@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import AuthModal from '../components/auth/AuthModal';
+import axios from '../lib/axiosAuth';
+import { resolveMediaUrl } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { useUi } from '../context/UiContext';
+import VideoModal from '../components/VideoModal';
 
 const featureData = [
   { icon: '🚌', title: 'Transport', description: 'Smart route options for buses, cabs, and self-drive trips.' },
@@ -23,30 +27,56 @@ const testimonials = [
 ];
 
 const HomePage = () => {
+  const { user, authenticateWithToken } = useAuth();
   const { language } = useUi();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [forts, setForts] = useState([]);
+  const [histories, setHistories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedFort, setSelectedFort] = useState('');
   const [tripType, setTripType] = useState('Weekend');
-  const apiOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/i, '');
-  const resolveImageUrl = (img) => {
-    if (!img) return '';
-    if (/^https?:\/\//i.test(img)) return img;
-    if (/^\/images\/[^\s]+$/i.test(img) && apiOrigin) return `${apiOrigin}${img}`;
-    return img;
-  };
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const resolveImageUrl = resolveMediaUrl;
 
   useEffect(() => {
-    const fetchForts = async () => {
+    const token = searchParams.get('token');
+    if (token) {
+      authenticateWithToken(token).then((authenticatedUser) => {
+        if (authenticatedUser) {
+          if (authenticatedUser.needsPhone) {
+            navigate('/complete-profile', { replace: true });
+            return;
+          }
+          navigate('/', { replace: true });
+        } else {
+          setShowAuthModal(true);
+        }
+      });
+    } else if (!user) {
+      setShowAuthModal(true);
+    }
+  }, [user, navigate, searchParams, authenticateWithToken]);
+
+  useEffect(() => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/forts`);
-        setForts(res.data || []);
+        const [fortsRes, historiesRes] = await Promise.all([
+          axios.get(`/forts`),
+          axios.get(`/history`)
+        ]);
+        setForts(fortsRes.data || []);
+        setHistories(historiesRes.data || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchForts();
+    fetchData();
   }, []);
 
   const topForts = useMemo(() => forts.slice(0, 6), [forts]);
@@ -54,6 +84,10 @@ const HomePage = () => {
 
   return (
     <div className="bg-softBg text-primaryDark">
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
       <section className="relative min-h-[72vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -85,12 +119,16 @@ const HomePage = () => {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-center text-2xl font-semibold text-primaryDark">{isEnglish ? 'Essential Trip Features' : 'महत्त्वाची ट्रिप फीचर्स'}</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <h2 className="text-center text-2xl font-semibold text-primaryDark sm:text-2xl">{isEnglish ? 'Essential Trip Features' : 'महत्त्वाची ट्रिप फीचर्स'}</h2>
+
+        <div className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 sm:grid-cols-2 md:grid-cols-4">
           {featureData.map((item) => (
-            <article key={item.title} className="rounded-2xl border border-primary/10 bg-white/85 p-5 shadow-soft transition hover:-translate-y-1 hover:border-primary/20">
-              <div className="text-2xl">{item.icon}</div>
-              <h3 className="mt-3 text-lg font-semibold text-primaryDark">
+            <article
+              key={item.title}
+              className="rounded-2xl border border-primary/10 bg-white/85 p-3 shadow-soft transition hover:-translate-y-1 hover:border-primary/20 sm:p-4 md:p-5"
+            >
+              <div className="text-xl sm:text-2xl">{item.icon}</div>
+              <h3 className="mt-2 text-sm font-semibold text-primaryDark sm:mt-3 sm:text-base md:text-lg">
                 {isEnglish
                   ? item.title
                   : item.title === 'Transport'
@@ -101,7 +139,7 @@ const HomePage = () => {
                   ? 'राहण्याची सोय'
                   : 'पेट्रोल'}
               </h3>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-1 text-xs leading-relaxed text-gray-600 sm:mt-2 sm:text-sm sm:leading-snug">
                 {isEnglish
                   ? item.description
                   : item.title === 'Transport'
@@ -165,23 +203,65 @@ const HomePage = () => {
       <section className="mx-auto max-w-6xl px-4 py-12">
         <h2 className="text-2xl font-semibold text-primaryDark">{isEnglish ? 'Short History' : 'संक्षिप्त इतिहास'}</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {topForts.slice(0, 3).map((fort) => (
-            <article key={`history-${fort._id}`} className="relative overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft">
-              <div
-                className="h-44 bg-cover bg-center"
-                style={{ backgroundImage: `url(${resolveImageUrl(fort.images?.[0] || '')})` }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primaryDark">▶</div>
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-primaryDark">{fort.name}</h3>
-                <p className="text-sm text-gray-600">{isEnglish ? "Watch a quick story of this fort's legacy." : 'या किल्ल्याचा थोडक्यात इतिहास पाहा.'}</p>
-              </div>
-            </article>
-          ))}
+          {histories.length > 0 ? (
+            histories.slice(0, 3).map((history) => (
+              <article
+                key={`history-${history._id}`}
+                className="relative overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft cursor-pointer transition hover:-translate-y-1"
+                onClick={() => {
+                  setSelectedVideo(history);
+                  setVideoModalOpen(true);
+                }}
+              >
+                <div
+                  className="h-44 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${history.thumbnail || resolveImageUrl(history.fort?.images?.[0] || '')})`
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35 transition group-hover:bg-black/45">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primaryDark hover:scale-110 transition">▶</div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-primaryDark">{history.title}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2">{history.description}</p>
+                  {history.duration && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      {history.duration}
+                    </p>
+                  )}
+                </div>
+              </article>
+            ))
+          ) : (
+            topForts.slice(0, 3).map((fort) => (
+              <article key={`history-${fort._id}`} className="relative overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft">
+                <div
+                  className="h-44 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${resolveImageUrl(fort.images?.[0] || '')})` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primaryDark">▶</div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-primaryDark">{fort.name}</h3>
+                  <p className="text-sm text-gray-600">{isEnglish ? "Watch a quick story of this fort's legacy." : 'या किल्ल्याचा थोडक्यात इतिहास पाहा.'}</p>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
+
+      <VideoModal
+        isOpen={videoModalOpen}
+        onClose={() => {
+          setVideoModalOpen(false);
+          setSelectedVideo(null);
+        }}
+        video={selectedVideo}
+        language={language}
+      />
 
       <section className="mx-auto max-w-6xl px-4 py-12">
         <h2 className="text-2xl font-semibold text-primaryDark">{isEnglish ? 'What Travelers Say' : 'प्रवासी काय म्हणतात'}</h2>

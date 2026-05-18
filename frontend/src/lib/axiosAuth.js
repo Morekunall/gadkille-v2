@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { getApiBaseUrl } from './api';
 
-// Ensure every request sends latest token (even after refresh)
+axios.defaults.baseURL = getApiBaseUrl();
+
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('gadkille_token');
   if (token) {
@@ -11,4 +13,3 @@ axios.interceptors.request.use((config) => {
 });
 
 export default axios;
-
