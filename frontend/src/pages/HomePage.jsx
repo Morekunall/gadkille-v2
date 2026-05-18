@@ -39,7 +39,11 @@ const HomePage = () => {
   const [tripType, setTripType] = useState('Weekend');
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [fetchError, setFetchError] = useState('');
   const resolveImageUrl = resolveMediaUrl;
+
+  const heroImage =
+    'https://images.pexels.com/photos/2132250/pexels-photo-2132250.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -64,6 +68,7 @@ const HomePage = () => {
       try {
         const fortsRes = await axios.get('/forts');
         setForts(fortsRes.data || []);
+        setFetchError('');
         try {
           const historiesRes = await axios.get('/history');
           setHistories(historiesRes.data || []);
@@ -72,12 +77,17 @@ const HomePage = () => {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setFetchError(
+          language === 'en'
+            ? 'Could not load forts. Check your connection or try again in a minute (API may be waking up).'
+            : 'किल्ले लोड झाले नाहीत. कनेक्शन तपासा किंवा थोड्या वेळाने पुन्हा प्रयत्न करा.'
+        );
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [language]);
 
   const topForts = useMemo(() => forts.slice(0, 6), [forts]);
   const isEnglish = language === 'en';
@@ -91,7 +101,7 @@ const HomePage = () => {
       <section className="relative min-h-[72vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/hero-fort.png')" }}
+          style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-primaryDark/85 via-primaryDark/70 to-primary/45" />
         <div className="relative mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 text-white md:py-24">
@@ -117,6 +127,14 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {fetchError && (
+        <div className="mx-auto max-w-6xl px-4 pt-6">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {fetchError}
+          </div>
+        </div>
+      )}
 
       <section className="mx-auto max-w-6xl px-4 py-14">
         <h2 className="text-center text-2xl font-semibold text-primaryDark sm:text-2xl">{isEnglish ? 'Essential Trip Features' : 'महत्त्वाची ट्रिप फीचर्स'}</h2>
@@ -179,6 +197,15 @@ const HomePage = () => {
             </article>
           ))}
         </div>
+        {!loading && forts.length === 0 && (
+          <p className="mt-4 text-center text-sm text-gray-500">
+            {fetchError
+              ? null
+              : isEnglish
+                ? 'No forts loaded.'
+                : 'किल्ले लोड झाले नाहीत.'}
+          </p>
+        )}
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12">

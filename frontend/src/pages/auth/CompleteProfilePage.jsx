@@ -54,7 +54,11 @@ const CompleteProfilePage = () => {
   };
 
   if (bootstrapping || !user) {
-    return null;
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-gray-500">
+        {t('Loading…', 'लोड होत आहे…')}
+      </div>
+    );
   }
 
   return (
