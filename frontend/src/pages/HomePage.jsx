@@ -28,6 +28,13 @@ const HomePage = () => {
   const [loading, setLoading] = useState(false);
   const [selectedFort, setSelectedFort] = useState('');
   const [tripType, setTripType] = useState('Weekend');
+  const apiOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/i, '');
+  const resolveImageUrl = (img) => {
+    if (!img) return '';
+    if (/^https?:\/\//i.test(img)) return img;
+    if (/^\/images\/[^\s]+$/i.test(img) && apiOrigin) return `${apiOrigin}${img}`;
+    return img;
+  };
 
   useEffect(() => {
     const fetchForts = async () => {
@@ -115,7 +122,14 @@ const HomePage = () => {
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(loading ? Array.from({ length: 6 }) : topForts).map((fort, idx) => (
             <article key={fort?._id || idx} className="overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft transition hover:-translate-y-1 hover:border-primary/20">
-              <div className="h-44 bg-accent/20 bg-cover bg-center" style={!loading ? { backgroundImage: `url(${fort.images?.[0] || ''})` } : undefined} />
+              <div
+                className="h-44 bg-accent/20 bg-cover bg-center"
+                style={
+                  !loading
+                    ? { backgroundImage: `url(${resolveImageUrl(fort.images?.[0] || '')})` }
+                    : undefined
+                }
+              />
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-primaryDark">{loading ? (isEnglish ? 'Loading...' : 'लोड होत आहे...') : fort.name}</h3>
                 <p className="mt-1 text-sm text-gray-600">{loading ? (isEnglish ? 'Fetching fort details...' : 'किल्ल्याची माहिती घेत आहे...') : fort.description?.slice(0, 90) || fort.location}</p>
@@ -153,7 +167,10 @@ const HomePage = () => {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {topForts.slice(0, 3).map((fort) => (
             <article key={`history-${fort._id}`} className="relative overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft">
-              <div className="h-44 bg-cover bg-center" style={{ backgroundImage: `url(${fort.images?.[0] || ''})` }} />
+              <div
+                className="h-44 bg-cover bg-center"
+                style={{ backgroundImage: `url(${resolveImageUrl(fort.images?.[0] || '')})` }}
+              />
               <div className="absolute inset-0 flex items-center justify-center bg-black/35">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primaryDark">▶</div>
               </div>

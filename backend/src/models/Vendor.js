@@ -10,6 +10,7 @@ const vendorSchema = new mongoose.Schema(
     },
     contactInfo: String,
     pricing: String,
+    experienceYears: { type: Number, default: 0 },
     availability: { type: Boolean, default: true },
     fort: { type: mongoose.Schema.Types.ObjectId, ref: 'Fort' }
   },

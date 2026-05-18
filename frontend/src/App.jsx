@@ -9,7 +9,10 @@ import RegisterPage from './pages/auth/RegisterPage';
 import UserDashboardPage from './pages/dashboard/UserDashboardPage';
 import AdminDashboardPage from './pages/dashboard/AdminDashboardPage';
 import ProtectedRoute from './components/routing/ProtectedRoute';
-import SimpleInfoPage from './pages/SimpleInfoPage';
+import ExplorePage from './pages/ExplorePage';
+import PlanTripPage from './pages/PlanTripPage';
+import GroupToursPage from './pages/GroupToursPage';
+import ContactPage from './pages/ContactPage';
 
 function App() {
   return (
@@ -19,10 +22,10 @@ function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/explore" element={<SimpleInfoPage type="explore" />} />
-              <Route path="/plan-trip" element={<SimpleInfoPage type="plan" />} />
-              <Route path="/group-tours" element={<SimpleInfoPage type="group" />} />
-              <Route path="/contact" element={<SimpleInfoPage type="contact" />} />
+              <Route path="/explore" element={<ExplorePage />} />
+              <Route path="/plan-trip" element={<PlanTripPage />} />
+              <Route path="/group-tours" element={<GroupToursPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/fort/:slug" element={<FortDetailsPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />

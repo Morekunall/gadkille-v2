@@ -29,7 +29,8 @@ const upload = multer({
 });
 
 router.post('/stay-images', protect, adminOnly, upload.array('images', 8), (req, res) => {
-  const urls = (req.files || []).map((file) => `/images/${file.filename}`);
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const urls = (req.files || []).map((file) => `${baseUrl}/images/${file.filename}`);
   res.status(201).json({ urls });
 });
 

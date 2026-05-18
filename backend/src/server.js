@@ -13,6 +13,7 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const tripRoutes = require('./routes/tripRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const inquiryRoutes = require('./routes/inquiryRoutes');
 
 const app = express();
 
@@ -37,6 +38,10 @@ app.use(
 app.use(express.json());
 app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use(
+  '/images',
+  express.static(path.resolve(__dirname, '..', '..', 'frontend', 'public', 'images'))
+);
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -46,6 +51,7 @@ app.use('/api/vendors', vendorRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/inquiries', inquiryRoutes);
 
 // Basic health check
 app.get('/api/health', (req, res) => {

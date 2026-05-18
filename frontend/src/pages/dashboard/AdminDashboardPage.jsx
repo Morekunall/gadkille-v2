@@ -8,6 +8,7 @@ const AdminDashboardPage = () => {
   const [bookings, setBookings] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [forts, setForts] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fortForm, setFortForm] = useState({
     _id: null,
@@ -27,20 +28,37 @@ const AdminDashboardPage = () => {
   });
   const [savingFort, setSavingFort] = useState(false);
   const [uploadingStayIdx, setUploadingStayIdx] = useState(null);
+  const [savingVendor, setSavingVendor] = useState(false);
+  const [vendorForm, setVendorForm] = useState({
+    _id: null,
+    name: '',
+    serviceType: 'stay',
+    contactInfo: '',
+    pricing: '',
+    experienceYears: '',
+    availability: true,
+    fort: ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [bRes, vRes, fRes] = await Promise.all([
+        const [bRes, vRes, fRes, iRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/bookings`),
           axios.get(`${import.meta.env.VITE_API_URL}/vendors`),
-          axios.get(`${import.meta.env.VITE_API_URL}/forts`)
+          axios.get(`${import.meta.env.VITE_API_URL}/forts`),
+          axios.get(`${import.meta.env.VITE_API_URL}/inquiries`)
         ]);
         setBookings(bRes.data);
         setVendors(vRes.data);
         setForts(fRes.data);
+        setInquiries(iRes.data);
       } catch (err) {
-        // silent in starter
+        showToast(
+          'error',
+          err.response?.data?.message ||
+            (language === 'en' ? 'Unable to load admin data.' : 'ॲडमिन डेटा लोड करता आला नाही.')
+        );
       } finally {
         setLoading(false);
       }
@@ -82,6 +100,104 @@ const AdminDashboardPage = () => {
         'error',
         err.response?.data?.message ||
           (language === 'en' ? 'Unable to update vendor.' : 'वेंडर अपडेट करता आले नाही.')
+      );
+    }
+  };
+
+  const resetVendorForm = () => {
+    setVendorForm({
+      _id: null,
+      name: '',
+      serviceType: 'stay',
+      contactInfo: '',
+      pricing: '',
+      experienceYears: '',
+      availability: true,
+      fort: ''
+    });
+  };
+
+  const startEditVendor = (vendor) => {
+    setVendorForm({
+      _id: vendor._id,
+      name: vendor.name || '',
+      serviceType: vendor.serviceType || 'stay',
+      contactInfo: vendor.contactInfo || '',
+      pricing: vendor.pricing || '',
+      experienceYears: vendor.experienceYears ?? '',
+      availability: vendor.availability !== false,
+      fort: vendor.fort || ''
+    });
+  };
+
+  const saveVendor = async (e) => {
+    e.preventDefault();
+    if (!vendorForm.name || !vendorForm.serviceType) {
+      showToast(
+        'error',
+        language === 'en' ? 'Vendor name and service type are required.' : 'वेंडर नाव आणि सेवा प्रकार आवश्यक आहे.'
+      );
+      return;
+    }
+
+    setSavingVendor(true);
+    try {
+      const payload = {
+        name: vendorForm.name,
+        serviceType: vendorForm.serviceType,
+        contactInfo: vendorForm.contactInfo,
+        pricing: vendorForm.pricing,
+        experienceYears: Number(vendorForm.experienceYears) || 0,
+        availability: !!vendorForm.availability,
+        fort: vendorForm.fort || undefined
+      };
+
+      const res = vendorForm._id
+        ? await axios.put(`${import.meta.env.VITE_API_URL}/vendors/${vendorForm._id}`, payload)
+        : await axios.post(`${import.meta.env.VITE_API_URL}/vendors`, payload);
+
+      setVendors((prev) => {
+        const exists = prev.some((v) => v._id === res.data._id);
+        if (exists) return prev.map((v) => (v._id === res.data._id ? res.data : v));
+        return [res.data, ...prev];
+      });
+      resetVendorForm();
+      showToast(
+        'success',
+        language === 'en' ? 'Vendor saved.' : 'वेंडर सेव्ह झाला.'
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        err.response?.data?.message ||
+          (language === 'en' ? 'Unable to save vendor.' : 'वेंडर सेव्ह करता आला नाही.')
+      );
+    } finally {
+      setSavingVendor(false);
+    }
+  };
+
+  const deleteVendor = async (vendor) => {
+    // eslint-disable-next-line no-alert
+    const ok = window.confirm(
+      language === 'en'
+        ? `Delete vendor ${vendor.name}?`
+        : `${vendor.name} वेंडर हटवायचा आहे का?`
+    );
+    if (!ok) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/vendors/${vendor._id}`);
+      setVendors((prev) => prev.filter((v) => v._id !== vendor._id));
+      if (vendorForm._id === vendor._id) resetVendorForm();
+      showToast(
+        'success',
+        language === 'en' ? 'Vendor deleted.' : 'वेंडर हटवला.'
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        err.response?.data?.message ||
+          (language === 'en' ? 'Unable to delete vendor.' : 'वेंडर हटवता आला नाही.')
       );
     }
   };
@@ -318,7 +434,8 @@ const AdminDashboardPage = () => {
     totalBookings: bookings.length,
     pendingRequests: bookings.filter((b) => (b.requestStatus || 'pending') === 'pending').length,
     totalForts: forts.length,
-    totalVendors: vendors.length
+    totalVendors: vendors.length,
+    totalInquiries: inquiries.length
   };
 
   return (
@@ -327,6 +444,7 @@ const AdminDashboardPage = () => {
         {[
           { id: 'overview', labelEn: 'Overview', labelMr: 'माहिती' },
           { id: 'requests', labelEn: 'Requests', labelMr: 'विनंत्या' },
+          { id: 'inquiries', labelEn: 'Inquiries', labelMr: 'चौकशी' },
           { id: 'forts', labelEn: 'Forts', labelMr: 'किल्ले' },
           { id: 'vendors', labelEn: 'Vendors', labelMr: 'वेंडर' }
         ].map((t) => (
@@ -367,6 +485,11 @@ const AdminDashboardPage = () => {
                   labelEn: 'Pending',
                   labelMr: 'प्रलंबित',
                   value: stats.pendingRequests
+                },
+                {
+                  labelEn: 'Inquiries',
+                  labelMr: 'चौकशी',
+                  value: stats.totalInquiries
                 },
                 { labelEn: 'Forts', labelMr: 'किल्ले', value: stats.totalForts },
                 { labelEn: 'Vendors', labelMr: 'वेंडर', value: stats.totalVendors }
@@ -556,6 +679,59 @@ const AdminDashboardPage = () => {
                     </div>
                   );
                 })
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-soft" hidden={tab !== 'inquiries'}>
+            <h2 className="text-sm font-semibold text-primaryDark">
+              {language === 'en' ? 'Plan/Group/Contact inquiries' : 'प्लॅन/ग्रुप/संपर्क चौकशी'}
+            </h2>
+            <p className="mt-2 text-xs text-gray-500">
+              {language === 'en'
+                ? 'All form submissions from Plan Trip, Group Tours and Contact pages.'
+                : 'Plan Trip, Group Tours आणि Contact पेजवरील सर्व फॉर्म सबमिशन्स.'}
+            </p>
+
+            <div className="mt-3 space-y-2 text-[11px]">
+              {loading ? (
+                <div className="h-24 animate-pulse rounded-2xl bg-softBg" />
+              ) : inquiries.length === 0 ? (
+                <p className="text-gray-500">
+                  {language === 'en' ? 'No inquiries yet.' : 'अजून चौकशी आलेली नाही.'}
+                </p>
+              ) : (
+                inquiries.slice(0, 50).map((inquiry) => (
+                  <div key={inquiry._id} className="rounded-2xl bg-softBg px-3 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-primaryDark">
+                          {inquiry.name} · {inquiry.location || (language === 'en' ? 'No location' : 'लोकेशन नाही')}
+                        </p>
+                        <p className="text-[10px] text-gray-600">
+                          {new Date(inquiry.createdAt).toLocaleString()} · {inquiry.category}
+                          {inquiry.tripType ? ` · ${inquiry.tripType}` : ''}
+                          {inquiry.groupSize ? ` · ${inquiry.groupSize} ${language === 'en' ? 'people' : 'लोक'}` : ''}
+                        </p>
+                        <p className="mt-1 text-[10px] text-gray-700">
+                          {inquiry.subject || inquiry.purpose || inquiry.message || '-'}
+                        </p>
+                        <p className="mt-1 text-[10px] text-primaryDark">
+                          {inquiry.phone}
+                          {inquiry.email ? ` · ${inquiry.email}` : ''}
+                        </p>
+                      </div>
+                      {inquiry.email && (
+                        <a
+                          href={`mailto:${inquiry.email}`}
+                          className="shrink-0 rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-primary hover:bg-gray-100"
+                        >
+                          {language === 'en' ? 'Email' : 'ई-मेल'}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -973,12 +1149,6 @@ const AdminDashboardPage = () => {
                           placeholder={language === 'en' ? 'Rating' : 'रेटिंग'}
                           className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[11px] focus:border-primary focus:outline-none"
                         />
-                        <input
-                          value={g.experienceYears ?? ''}
-                          onChange={(e) => updateFortArrayItem('guides', idx, { experienceYears: Number(e.target.value) })}
-                          placeholder={language === 'en' ? 'Experience years' : 'अनुभव वर्षे'}
-                          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[11px] focus:border-primary focus:outline-none"
-                        />
                         <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-[11px]">
                           <input
                             type="checkbox"
@@ -998,7 +1168,6 @@ const AdminDashboardPage = () => {
                         language: [],
                         pricing: 0,
                         rating: 0,
-                        experienceYears: 0,
                         contactInfo: '',
                         available: true
                       })
@@ -1162,14 +1331,112 @@ const AdminDashboardPage = () => {
 
         <div className="space-y-4">
           <div className="rounded-3xl bg-white p-5 shadow-soft" hidden={tab !== 'vendors'}>
-            <h2 className="text-sm font-semibold text-primaryDark">
-              {language === 'en' ? 'Vendors & guides' : 'वेंडर व मार्गदर्शक'}
-            </h2>
-            <p className="mt-2 text-xs text-gray-500">
-              {language === 'en'
-                ? 'Toggle availability for local stays, guides and vehicles.'
-                : 'स्थानिक राहण्याची सोय, मार्गदर्शक व वाहनांची उपलब्धता येथे बदलू शकता.'}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-primaryDark">
+                  {language === 'en' ? 'Vendors & guides' : 'वेंडर व मार्गदर्शक'}
+                </h2>
+                <p className="mt-2 text-xs text-gray-500">
+                  {language === 'en'
+                    ? 'Create, edit, delete and toggle local stays, guides and vehicles.'
+                    : 'स्थानिक राहण्याची सोय, मार्गदर्शक व वाहने तयार/अपडेट/हटवा आणि उपलब्धता बदला.'}
+                </p>
+              </div>
+              <button
+                onClick={resetVendorForm}
+                className="text-[11px] font-semibold text-primary hover:text-primaryDark"
+              >
+                {language === 'en' ? 'New vendor' : 'नवीन वेंडर'}
+              </button>
+            </div>
+
+            <form onSubmit={saveVendor} className="mt-4 grid gap-2 text-[11px] md:grid-cols-2">
+              <input
+                value={vendorForm.name}
+                onChange={(e) => setVendorForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder={language === 'en' ? 'Vendor name' : 'वेंडर नाव'}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              />
+              <select
+                value={vendorForm.serviceType}
+                onChange={(e) => setVendorForm((p) => ({ ...p, serviceType: e.target.value }))}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              >
+                <option value="stay">{language === 'en' ? 'Stay' : 'राहण्याची सोय'}</option>
+                <option value="guide">{language === 'en' ? 'Guide' : 'मार्गदर्शक'}</option>
+                <option value="vehicle">{language === 'en' ? 'Vehicle' : 'वाहन'}</option>
+              </select>
+              <input
+                value={vendorForm.contactInfo}
+                onChange={(e) => setVendorForm((p) => ({ ...p, contactInfo: e.target.value }))}
+                placeholder={language === 'en' ? 'Contact info' : 'संपर्क माहिती'}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              />
+              <input
+                value={vendorForm.pricing}
+                onChange={(e) => setVendorForm((p) => ({ ...p, pricing: e.target.value }))}
+                placeholder={language === 'en' ? 'Pricing' : 'किंमत'}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              />
+              <input
+                type="number"
+                min={0}
+                value={vendorForm.experienceYears}
+                onChange={(e) => setVendorForm((p) => ({ ...p, experienceYears: e.target.value }))}
+                placeholder={language === 'en' ? 'Years of experience' : 'अनुभव वर्षे'}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              />
+              <select
+                value={vendorForm.fort}
+                onChange={(e) => setVendorForm((p) => ({ ...p, fort: e.target.value }))}
+                className="rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+              >
+                <option value="">
+                  {language === 'en' ? 'Select fort (optional)' : 'किल्ला निवडा (ऐच्छिक)'}
+                </option>
+                {forts.map((f) => (
+                  <option key={f._id} value={f._id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+              <label className="md:col-span-2 flex items-center gap-2 rounded-xl border border-gray-200 bg-softBg px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={!!vendorForm.availability}
+                  onChange={(e) => setVendorForm((p) => ({ ...p, availability: e.target.checked }))}
+                />
+                {language === 'en' ? 'Available' : 'उपलब्ध'}
+              </label>
+              <div className="md:col-span-2 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={savingVendor}
+                  className="rounded-full bg-primary px-4 py-2 text-[11px] font-semibold text-white hover:bg-primaryDark disabled:opacity-60"
+                >
+                  {savingVendor
+                    ? language === 'en'
+                      ? 'Saving...'
+                      : 'सेव्ह करत आहे...'
+                    : vendorForm._id
+                    ? language === 'en'
+                      ? 'Update vendor'
+                      : 'वेंडर अपडेट करा'
+                    : language === 'en'
+                    ? 'Add vendor'
+                    : 'वेंडर जोडा'}
+                </button>
+                {vendorForm._id && (
+                  <button
+                    type="button"
+                    onClick={resetVendorForm}
+                    className="rounded-full bg-softBg px-4 py-2 text-[11px] font-semibold text-gray-700 hover:bg-gray-100"
+                  >
+                    {language === 'en' ? 'Cancel edit' : 'रद्द करा'}
+                  </button>
+                )}
+              </div>
+            </form>
 
             <div className="mt-3 space-y-2 text-[11px]">
               {loading ? (
@@ -1181,7 +1448,7 @@ const AdminDashboardPage = () => {
                     : 'अजून कोणतेही वेंडर जोडलेले नाहीत.'}
                 </p>
               ) : (
-                vendors.slice(0, 5).map((v) => (
+                vendors.slice(0, 30).map((v) => (
                   <div
                     key={v._id}
                     className="flex items-center justify-between rounded-2xl bg-softBg px-3 py-2"
@@ -1198,13 +1465,34 @@ const AdminDashboardPage = () => {
                           ? 'Not available'
                           : 'उपलब्ध नाही'}
                       </p>
+                      {v.experienceYears > 0 && (
+                        <p className="text-[10px] text-gray-600">
+                          {language === 'en'
+                            ? `${v.experienceYears} years experience`
+                            : `${v.experienceYears} वर्षांचा अनुभव`}
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={() => toggleVendorAvailability(v)}
-                      className="text-[10px] font-semibold text-primary hover:text-primaryDark"
-                    >
-                      {language === 'en' ? 'Toggle' : 'बदल करा'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleVendorAvailability(v)}
+                        className="text-[10px] font-semibold text-primary hover:text-primaryDark"
+                      >
+                        {language === 'en' ? 'Toggle' : 'बदल करा'}
+                      </button>
+                      <button
+                        onClick={() => startEditVendor(v)}
+                        className="text-[10px] font-semibold text-primary hover:text-primaryDark"
+                      >
+                        {language === 'en' ? 'Edit' : 'संपादित'}
+                      </button>
+                      <button
+                        onClick={() => deleteVendor(v)}
+                        className="text-[10px] font-semibold text-red-600 hover:text-red-700"
+                      >
+                        {language === 'en' ? 'Delete' : 'हटवा'}
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

@@ -71,5 +71,5 @@ Key front-end pieces:
 - **Vendors:** expose CRUD endpoints for `Vendor` and attach to admin dashboard cards.
 - **Map:** embed Google Maps or Mapbox in `FortDetailsPage` using `fort.mapCoordinates`.
 - **Weather:** integrate a weather API (e.g., OpenWeather) and show real-time conditions for each fort.
-- **SEO:** use React Helmet (or Vite plugins) for meta tags and fort-specific SEO-friendly URLs (`/fort/raigad-fort`).
+- **SEO:** use React Helmet (or Vite plugins) for meta tags and fort-specific SEO-friendly URLs (`/fort/visapur-fort`).
 
