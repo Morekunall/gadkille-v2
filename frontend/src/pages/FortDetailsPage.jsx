@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../lib/axiosAuth';
+import { resolveMediaUrl } from '../lib/api';
 import { useUi } from '../context/UiContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,13 +23,7 @@ const FortDetailsPage = () => {
   const [stayPhotoModal, setStayPhotoModal] = useState(null);
   const [loginPrompt, setLoginPrompt] = useState(false);
   const [vendors, setVendors] = useState([]);
-  const apiOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/i, '');
-  const resolveImageUrl = (img) => {
-    if (!img) return '';
-    if (/^https?:\/\//i.test(img)) return img;
-    if (/^\/images\/[^\s]+$/i.test(img) && apiOrigin) return `${apiOrigin}${img}`;
-    return img;
-  };
+  const resolveImageUrl = resolveMediaUrl;
 
   // Auto-change image every 5 seconds if multiple images
   useEffect(() => {
@@ -44,9 +39,9 @@ const FortDetailsPage = () => {
     const fetchFort = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/forts/${slug}`);
+        const res = await axios.get(`/forts/${slug}`);
         setFort(res.data);
-        const vendorRes = await axios.get(`${import.meta.env.VITE_API_URL}/vendors`, {
+        const vendorRes = await axios.get(`/vendors`, {
           params: { fortId: res.data?._id }
         });
         setVendors(vendorRes.data || []);
@@ -129,7 +124,7 @@ const FortDetailsPage = () => {
         };
       }
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/bookings`, bookingData);
+      await axios.post(`/bookings`, bookingData);
       showToast(
         'success',
         language === 'en'

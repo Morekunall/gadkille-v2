@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import axios from '../lib/axiosAuth';
 import { useUi } from '../context/UiContext';
 
 const initialForm = {
@@ -36,7 +36,7 @@ const GroupToursPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/inquiries`, {
+      await axios.post(`/inquiries`, {
         category: 'group_tour',
         tripType: form.tripType,
         name: form.name,

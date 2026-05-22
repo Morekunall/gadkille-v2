@@ -12,7 +12,6 @@ const Navbar = () => {
     { to: '/', label: language === 'en' ? 'Home' : 'मुख्यपृष्ठ' },
     { to: '/explore', label: language === 'en' ? 'Explore' : 'भ्रमंती' },
     { to: '/plan-trip', label: language === 'en' ? 'Plan Trip' : 'ट्रिप प्लॅन' },
-    { to: '/group-tours', label: language === 'en' ? 'Group Tours' : 'ग्रुप टूर' },
     { to: '/contact', label: language === 'en' ? 'Contact' : 'संपर्क' }
   ];
   const avatarText = (user?.name || user?.email || 'U').slice(0, 1).toUpperCase();
@@ -25,7 +24,7 @@ const Navbar = () => {
             G
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-primaryDark">GadYatra</p>
+            <p className="text-sm font-semibold text-primaryDark">GadKille</p>
             <p className="text-xs text-gray-500">{language === 'en' ? 'Fort Exploration' : 'किल्ले भ्रमंती'}</p>
           </div>
         </Link>

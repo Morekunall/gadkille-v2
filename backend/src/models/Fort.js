@@ -68,6 +68,7 @@ const fortSchema = new mongoose.Schema(
     history: String,
     description: String,
     images: [String],
+    videos: [String],
     routes: [routeSchema],
     facilities: [facilitySchema],
     stayOptions: [stayOptionSchema],

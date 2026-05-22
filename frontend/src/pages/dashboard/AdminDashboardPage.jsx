@@ -1,10 +1,27 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
+import axios from '../../lib/axiosAuth';
+import { isUsingProductionApi } from '../../lib/api';
 import { useUi } from '../../context/UiContext';
+import HistoryManagementTab from '../../components/HistoryManagementTab';
+
+const ADMIN_TABS = ['overview', 'requests', 'inquiries', 'forts', 'history', 'vendors'];
+
+const TAB_TITLES = {
+  overview: { en: 'Overview', mr: 'माहिती' },
+  requests: { en: 'Booking requests', mr: 'बुकिंग विनंत्या' },
+  inquiries: { en: 'Inquiries', mr: 'चौकशी' },
+  forts: { en: 'Fort management', mr: 'किल्ले व्यवस्थापन' },
+  history: { en: 'Short history', mr: 'संक्षिप्त इतिहास' },
+  vendors: { en: 'Vendors', mr: 'वेंडर' },
+};
 
 const AdminDashboardPage = () => {
   const { language, showToast } = useUi();
-  const [tab, setTab] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') || 'overview';
+  const tab = ADMIN_TABS.includes(tabParam) ? tabParam : 'overview';
+  const setTab = (id) => setSearchParams({ tab: id }, { replace: true });
   const [bookings, setBookings] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [forts, setForts] = useState([]);
@@ -18,6 +35,7 @@ const AdminDashboardPage = () => {
     history: '',
     description: '',
     imagesText: '',
+    videosText: '',
     routes: [],
     facilities: [],
     stayOptions: [],
@@ -44,10 +62,10 @@ const AdminDashboardPage = () => {
     const fetchData = async () => {
       try {
         const [bRes, vRes, fRes, iRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/bookings`),
-          axios.get(`${import.meta.env.VITE_API_URL}/vendors`),
-          axios.get(`${import.meta.env.VITE_API_URL}/forts`),
-          axios.get(`${import.meta.env.VITE_API_URL}/inquiries`)
+          axios.get(`/bookings`),
+          axios.get(`/vendors`),
+          axios.get(`/forts`),
+          axios.get(`/inquiries`)
         ]);
         setBookings(bRes.data);
         setVendors(vRes.data);
@@ -69,14 +87,28 @@ const AdminDashboardPage = () => {
   const setBookingStatus = async (booking, requestStatus) => {
     try {
       const updated = await axios.put(
-        `${import.meta.env.VITE_API_URL}/bookings/${booking._id}/status`,
+        `/bookings/${booking._id}/status`,
         { requestStatus }
       );
-      setBookings((prev) => prev.map((b) => (b._id === booking._id ? updated.data : b)));
-      showToast(
-        'success',
-        language === 'en' ? 'Booking updated.' : 'बुकिंग अपडेट झाले.'
-      );
+      const { congratulationsEmailSent, emailError, ...bookingData } = updated.data;
+      setBookings((prev) => prev.map((b) => (b._id === booking._id ? bookingData : b)));
+      if (requestStatus === 'accepted') {
+        showToast(
+          congratulationsEmailSent ? 'success' : 'error',
+          congratulationsEmailSent
+            ? language === 'en'
+              ? 'Accepted — congratulations email sent to the customer.'
+              : 'स्वीकारले — ग्राहकाला अभिनंदन ई-मेल पाठवला.'
+            : language === 'en'
+              ? `Accepted, but email failed: ${emailError || 'Set RESEND_API_KEY on Render (SMTP is often blocked).'}`
+              : `स्वीकारले, पण ई-मेल अयशस्वी: ${emailError || 'Render वर RESEND_API_KEY सेट करा.'}`
+        );
+      } else {
+        showToast(
+          'success',
+          language === 'en' ? 'Booking updated.' : 'बुकिंग अपडेट झाले.'
+        );
+      }
     } catch (err) {
       showToast(
         'error',
@@ -86,10 +118,35 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const deleteBooking = async (booking) => {
+    // eslint-disable-next-line no-alert
+    const ok = window.confirm(
+      language === 'en'
+        ? `Delete booking request for ${booking.fortId?.name || 'Fort'}?`
+        : `${booking.fortId?.name || 'किल्ला'} साठीची बुकिंग विनंती हटवायची आहे का?`
+    );
+    if (!ok) return;
+
+    try {
+      await axios.delete(`/bookings/${booking._id}/admin`);
+      setBookings((prev) => prev.filter((b) => b._id !== booking._id));
+      showToast(
+        'success',
+        language === 'en' ? 'Booking request deleted.' : 'बुकिंग विनंती हटवली.'
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        err.response?.data?.message ||
+          (language === 'en' ? 'Unable to delete booking.' : 'बुकिंग हटवता आले नाही.')
+      );
+    }
+  };
+
   const toggleVendorAvailability = async (vendor) => {
     try {
       const updated = await axios.put(
-        `${import.meta.env.VITE_API_URL}/vendors/${vendor._id}`,
+        `/vendors/${vendor._id}`,
         { availability: !vendor.availability }
       );
       setVendors((prev) =>
@@ -153,8 +210,8 @@ const AdminDashboardPage = () => {
       };
 
       const res = vendorForm._id
-        ? await axios.put(`${import.meta.env.VITE_API_URL}/vendors/${vendorForm._id}`, payload)
-        : await axios.post(`${import.meta.env.VITE_API_URL}/vendors`, payload);
+        ? await axios.put(`/vendors/${vendorForm._id}`, payload)
+        : await axios.post(`/vendors`, payload);
 
       setVendors((prev) => {
         const exists = prev.some((v) => v._id === res.data._id);
@@ -186,7 +243,7 @@ const AdminDashboardPage = () => {
     );
     if (!ok) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/vendors/${vendor._id}`);
+      await axios.delete(`/vendors/${vendor._id}`);
       setVendors((prev) => prev.filter((v) => v._id !== vendor._id));
       if (vendorForm._id === vendor._id) resetVendorForm();
       showToast(
@@ -203,7 +260,7 @@ const AdminDashboardPage = () => {
   };
 
   const startEditFort = (fort) => {
-    setTab('forts');
+    setSearchParams({ tab: 'forts' }, { replace: true });
     setFortForm({
       _id: fort._id,
       name: fort.name || '',
@@ -212,6 +269,7 @@ const AdminDashboardPage = () => {
       history: fort.history || '',
       description: fort.description || '',
       imagesText: (fort.images || []).join('\n'),
+      videosText: (fort.videos || []).join('\n'),
       routes: fort.routes || [],
       facilities: fort.facilities || [],
       stayOptions: (fort.stayOptions || []).map((stay) => ({
@@ -234,6 +292,7 @@ const AdminDashboardPage = () => {
       history: '',
       description: '',
       imagesText: '',
+      videosText: '',
       routes: [],
       facilities: [],
       stayOptions: [],
@@ -273,6 +332,20 @@ const AdminDashboardPage = () => {
           !/google\.com\/maps|\/maps\/place|data=!/i.test(s)
       );
 
+  const parseVideoUrls = (text) =>
+    (text || '')
+      .split(/\r?\n/g)
+      .map((s) => s.trim())
+      .filter((s) => (/^https?:\/\//i.test(s) || /^\/uploads\/videos\/[^\s]+$/i.test(s)));
+
+  const toSlug = (value) =>
+    (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
   const uploadStayImages = async (idx, fileList) => {
     const files = Array.from(fileList || []).slice(0, 8);
     if (!files.length) return;
@@ -280,7 +353,7 @@ const AdminDashboardPage = () => {
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append('images', file));
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/uploads/stay-images`, formData, {
+      const res = await axios.post(`/uploads/stay-images`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const uploadedUrls = res.data?.urls || [];
@@ -313,7 +386,7 @@ const AdminDashboardPage = () => {
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append('images', file));
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/uploads/stay-images`, formData, {
+      const res = await axios.post(`/uploads/stay-images`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const uploadedUrls = res.data?.urls || [];
@@ -335,14 +408,43 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const uploadFortVideos = async (fileList) => {
+    const files = Array.from(fileList || []).slice(0, 3);
+    if (!files.length) return;
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('videos', file));
+      const res = await axios.post(`/uploads/fort-videos`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrls = res.data?.urls || [];
+      setFortForm((prev) => {
+        const existing = parseVideoUrls(prev.videosText || '');
+        const merged = [...existing, ...uploadedUrls];
+        return { ...prev, videosText: merged.join('\n') };
+      });
+      showToast(
+        'success',
+        language === 'en' ? 'Fort videos uploaded.' : 'किल्ल्याचे व्हिडिओ अपलोड झाले.'
+      );
+    } catch (err) {
+      showToast(
+        'error',
+        err.response?.data?.message ||
+          (language === 'en' ? 'Video upload failed.' : 'व्हिडिओ अपलोड अयशस्वी.')
+      );
+    }
+  };
+
   const saveFort = async (e) => {
     e.preventDefault();
-    if (!fortForm.name || !fortForm.slug || !fortForm.location) {
+    const normalizedSlug = toSlug(fortForm.slug || fortForm.name);
+    if (!fortForm.name || !fortForm.location || !normalizedSlug) {
       showToast(
         'error',
         language === 'en'
-          ? 'Name, slug and location are required.'
-          : 'नाव, स्लग आणि लोकेशन आवश्यक आहे.'
+          ? 'Name and location are required.'
+          : 'नाव आणि लोकेशन आवश्यक आहे.'
       );
       return;
     }
@@ -350,6 +452,7 @@ const AdminDashboardPage = () => {
     setSavingFort(true);
     try {
       const images = parseImageUrls(fortForm.imagesText);
+      const videos = parseVideoUrls(fortForm.videosText);
       const latNum =
         fortForm.lat === '' || fortForm.lat === null ? null : Number(fortForm.lat);
       const lngNum =
@@ -361,11 +464,12 @@ const AdminDashboardPage = () => {
 
       const payload = {
         name: fortForm.name,
-        slug: fortForm.slug,
+        slug: normalizedSlug,
         location: fortForm.location,
         history: fortForm.history,
         description: fortForm.description,
         images,
+        videos,
         routes: fortForm.routes || [],
         facilities: fortForm.facilities || [],
         stayOptions: (fortForm.stayOptions || []).map((stay) => ({
@@ -381,8 +485,8 @@ const AdminDashboardPage = () => {
         mapCoordinates
       };
       const res = fortForm._id
-        ? await axios.put(`${import.meta.env.VITE_API_URL}/forts/${fortForm._id}`, payload)
-        : await axios.post(`${import.meta.env.VITE_API_URL}/forts`, payload);
+        ? await axios.put(`/forts/${fortForm._id}`, payload)
+        : await axios.post(`/forts`, payload);
 
       setForts((prev) => {
         const exists = prev.some((f) => f._id === res.data._id);
@@ -414,7 +518,7 @@ const AdminDashboardPage = () => {
     );
     if (!ok) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/forts/${fort._id}`);
+      await axios.delete(`/forts/${fort._id}`);
       setForts((prev) => prev.filter((f) => f._id !== fort._id));
       if (fortForm._id === fort._id) resetFortForm();
       showToast(
@@ -438,14 +542,25 @@ const AdminDashboardPage = () => {
     totalInquiries: inquiries.length
   };
 
+  const sectionTitle = TAB_TITLES[tab] || TAB_TITLES.overview;
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-4 flex flex-wrap gap-2">
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+          {language === 'en' ? 'Administration' : 'प्रशासन'}
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold text-primaryDark">
+          {language === 'en' ? sectionTitle.en : sectionTitle.mr}
+        </h1>
+      </div>
+      <div className="mb-4 hidden flex-wrap gap-2">
         {[
           { id: 'overview', labelEn: 'Overview', labelMr: 'माहिती' },
           { id: 'requests', labelEn: 'Requests', labelMr: 'विनंत्या' },
           { id: 'inquiries', labelEn: 'Inquiries', labelMr: 'चौकशी' },
           { id: 'forts', labelEn: 'Forts', labelMr: 'किल्ले' },
+          { id: 'history', labelEn: 'Short History', labelMr: 'संक्षिप्त इतिहास' },
           { id: 'vendors', labelEn: 'Vendors', labelMr: 'वेंडर' }
         ].map((t) => (
           <button
@@ -557,6 +672,13 @@ const AdminDashboardPage = () => {
             <h2 className="text-sm font-semibold text-primaryDark">
               {language === 'en' ? 'Booking requests' : 'बुकिंग विनंत्या'}
             </h2>
+            {isUsingProductionApi() && (
+              <p className="mt-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] text-sky-950">
+                {language === 'en'
+                  ? 'Render blocks Gmail SMTP. Set RESEND_API_KEY on Render (resend.com → API Keys) so acceptance emails are delivered.'
+                  : 'Render Gmail SMTP blocked — set RESEND_API_KEY on Render for customer emails.'}
+              </p>
+            )}
             <p className="mt-2 text-xs text-gray-500">
               {language === 'en'
                 ? 'Accept or reject booking requests and contact users.'
@@ -674,6 +796,13 @@ const AdminDashboardPage = () => {
                           >
                             {language === 'en' ? 'Reject ✗' : 'नकार ✗'}
                           </button>
+                          <button
+                            onClick={() => deleteBooking(b)}
+                            className="rounded-full bg-gray-600 px-3 py-1 text-[10px] font-semibold text-white hover:bg-gray-700"
+                            title={language === 'en' ? 'Delete booking request' : 'बुकिंग विनंती हटवा'}
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -747,6 +876,13 @@ const AdminDashboardPage = () => {
                     ? 'Add, update, or remove forts shown on the home page.'
                     : 'होम पेजवर दिसणारे किल्ले जोडा, अपडेट करा किंवा हटवा.'}
                 </p>
+                {isUsingProductionApi() && (
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-950">
+                    {language === 'en'
+                      ? 'Live site (Render): paste full image URLs above (one per line). File uploads are lost when the server restarts — they are not your permanent photos. Delete demo forts (Lohagad/Visapur/Ramshej) if you do not need them.'
+                      : 'लाइव साइट (Render): वर पूर्ण इमेज URL चिकटवा. फाइल अपलोड रीस्टार्टनंतर हरवतात. डेमो किल्ले हटवा.'}
+                  </p>
+                )}
               </div>
               <button
                 onClick={resetFortForm}
@@ -776,6 +912,11 @@ const AdminDashboardPage = () => {
                   onChange={(e) => setFortForm((p) => ({ ...p, slug: e.target.value }))}
                   className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
                 />
+                <p className="mt-1 text-[10px] text-gray-500">
+                  {language === 'en'
+                    ? 'If left blank, slug is auto-generated from name.'
+                    : 'रिक्त ठेवल्यास स्लग नावावरून आपोआप तयार होईल.'}
+                </p>
               </div>
               <div className="md:col-span-1">
                 <label className="mb-1 block text-[11px] text-gray-700">
@@ -818,9 +959,50 @@ const AdminDashboardPage = () => {
                     className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 text-[11px] file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:text-white file:font-semibold"
                   />
                   <p className="mt-1 text-[10px] text-gray-500">
+                    {isUsingProductionApi()
+                      ? language === 'en'
+                        ? 'On Render, prefer image URLs in the box above. Uploads work until the next deploy only.'
+                        : 'Render वर वर URL वापरा. अपलोड फक्त तात्पुरते.'
+                      : language === 'en'
+                        ? 'Uploaded images are saved on the API server and URLs are auto-filled.'
+                        : 'अपलोड केलेल्या प्रतिमा API सर्व्हरवर सेव्ह होतात.'}
+                  </p>
+                </div>
+              </div>
+              <div className="md:col-span-1">
+                <label className="mb-1 block text-[11px] text-gray-700">
+                  {language === 'en'
+                    ? 'Videos (one URL per line)'
+                    : 'व्हिडिओ (प्रत्येक ओळीवर 1 URL)'}
+                </label>
+                <textarea
+                  rows={3}
+                  value={fortForm.videosText}
+                  onChange={(e) =>
+                    setFortForm((p) => ({ ...p, videosText: e.target.value }))
+                  }
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+                />
+                <div className="mt-2">
+                  <label className="mb-1 block text-[11px] text-gray-700">
                     {language === 'en'
-                      ? 'Uploaded files are saved in frontend/public/images/ and URLs are auto-filled.'
-                      : 'अपलोड केलेल्या फाइल्स frontend/public/images/ मध्ये सेव्ह होतात आणि URL आपोआप भरले जातात.'}
+                      ? 'Or upload videos (MP4/WEBM/MOV)'
+                      : 'किंवा व्हिडिओ अपलोड करा (MP4/WEBM/MOV)'}
+                  </label>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    multiple
+                    onChange={async (e) => {
+                      await uploadFortVideos(e.target.files);
+                      e.target.value = '';
+                    }}
+                    className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 text-[11px] file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:text-white file:font-semibold"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    {language === 'en'
+                      ? 'Uploaded videos are saved on the API server (uploads/videos) and URLs are auto-filled.'
+                      : 'अपलोड केलेले व्हिडिओ API सर्व्हरवर (uploads/videos) सेव्ह होतात.'}
                   </p>
                 </div>
               </div>
@@ -1326,6 +1508,15 @@ const AdminDashboardPage = () => {
                 ))
               )}
             </div>
+          </div>
+
+          <div hidden={tab !== 'history'}>
+            <HistoryManagementTab
+              language={language}
+              showToast={showToast}
+              loading={loading}
+              forts={forts}
+            />
           </div>
         </div>
 

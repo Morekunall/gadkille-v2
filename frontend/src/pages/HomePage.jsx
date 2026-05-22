@@ -3,7 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '../components/auth/AuthModal';
 import axios from '../lib/axiosAuth';
 import { resolveMediaUrl } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
+import FortGrid from '../components/forts/FortGrid';
+import { useForts } from '../hooks/useForts';
+import { useAuthOAuthCallback } from '../hooks/useAuthOAuthCallback';
 import { useUi } from '../context/UiContext';
 import VideoModal from '../components/VideoModal';
 
@@ -27,12 +29,13 @@ const testimonials = [
 ];
 
 const HomePage = () => {
-  const { user, authenticateWithToken } = useAuth();
   const { language } = useUi();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  useAuthOAuthCallback();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [forts, setForts] = useState([]);
+  const { forts, loading: fortsLoading, error: fortsError } = useForts();
   const [histories, setHistories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedFort, setSelectedFort] = useState('');
@@ -46,28 +49,9 @@ const HomePage = () => {
     'https://images.pexels.com/photos/2132250/pexels-photo-2132250.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      authenticateWithToken(token).then((authenticatedUser) => {
-        if (authenticatedUser) {
-          if (authenticatedUser.needsPhone) {
-            navigate('/complete-profile', { replace: true });
-            return;
-          }
-          navigate('/', { replace: true });
-        } else {
-          setShowAuthModal(true);
-        }
-      });
-    }
-  }, [user, navigate, searchParams, authenticateWithToken]);
-
-  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const fortsRes = await axios.get('/forts');
-        setForts(fortsRes.data || []);
         setFetchError('');
         try {
           const historiesRes = await axios.get('/history');
@@ -175,37 +159,21 @@ const HomePage = () => {
 
       <section className="mx-auto max-w-6xl px-4 py-8">
         <h2 className="text-2xl font-semibold text-primaryDark">{isEnglish ? 'Popular Forts' : 'लोकप्रिय किल्ले'}</h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(loading ? Array.from({ length: 6 }) : topForts).map((fort, idx) => (
-            <article key={fort?._id || idx} className="overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-soft transition hover:-translate-y-1 hover:border-primary/20">
-              <div
-                className="h-44 bg-accent/20 bg-cover bg-center"
-                style={
-                  !loading
-                    ? { backgroundImage: `url(${resolveImageUrl(fort.images?.[0] || '')})` }
-                    : undefined
-                }
-              />
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-primaryDark">{loading ? (isEnglish ? 'Loading...' : 'लोड होत आहे...') : fort.name}</h3>
-                <p className="mt-1 text-sm text-gray-600">{loading ? (isEnglish ? 'Fetching fort details...' : 'किल्ल्याची माहिती घेत आहे...') : fort.description?.slice(0, 90) || fort.location}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-primary">4.7 ★</span>
-                  {!loading && <Link to={`/fort/${fort.slug}`} className="text-sm font-semibold text-primaryDark hover:underline">{isEnglish ? 'View Details' : 'तपशील पहा'}</Link>}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-        {!loading && forts.length === 0 && (
-          <p className="mt-4 text-center text-sm text-gray-500">
-            {fetchError
-              ? null
-              : isEnglish
-                ? 'No forts loaded.'
-                : 'किल्ले लोड झाले नाहीत.'}
+        {(fetchError || fortsError) && (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {fetchError || fortsError}
           </p>
         )}
+        <div className="mt-6">
+        <FortGrid
+          forts={topForts}
+          loading={fortsLoading}
+          language={language}
+          emptyMessage={
+            isEnglish ? 'No forts yet. Add forts in Admin → Forts.' : 'अजून किल्ले नाहीत. Admin → Forts मध्ये जोडा.'
+          }
+        />
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12">

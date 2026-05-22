@@ -1,7 +1,9 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { sendBookingCongratulationsSafe } = require('../utils/sendUserEmails');
 
 const router = express.Router();
 
@@ -43,6 +45,11 @@ router.put(
       return res.status(400).json({ message: 'Invalid requestStatus' });
     }
 
+    const existing = await Booking.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { requestStatus },
@@ -51,11 +58,18 @@ router.put(
       .populate('userId', 'name email')
       .populate('fortId', 'name location slug');
 
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+    let congratulationsEmailSent = false;
+    if (requestStatus === 'accepted' && existing.requestStatus !== 'accepted') {
+      if (!booking.userId?.email) {
+        const customerId = booking.userId?._id || booking.userId;
+        const customer = await User.findById(customerId).select('name email');
+        if (customer) booking.userId = customer;
+      }
+      congratulationsEmailSent = await sendBookingCongratulationsSafe(booking);
     }
 
-    res.json(booking);
+    const payload = booking.toObject();
+    res.json({ ...payload, congratulationsEmailSent });
   })
 );
 
@@ -105,6 +119,23 @@ router.get(
       .populate('fortId', 'name location slug')
       .sort({ createdAt: -1 });
     res.json(bookings);
+  })
+);
+
+// @route   DELETE /api/bookings/:id/admin
+// @desc    Admin: delete a booking request permanently
+router.delete(
+  '/:id/admin',
+  protect,
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Booking deleted successfully' });
   })
 );
 

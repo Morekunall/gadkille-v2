@@ -1,48 +1,39 @@
+export const PRODUCTION_API_ORIGIN = 'https://gadkille-backend-clean.onrender.com';
+const PRODUCTION_API = `${PRODUCTION_API_ORIGIN}/api`;
+
+/** Same host that issues Google OAuth tokens (must match GOOGLE_REDIRECT_URI backend). */
+export function getOAuthApiOrigin() {
+  const envOAuth = String(import.meta.env.VITE_OAUTH_API_ORIGIN || '').trim();
+  if (envOAuth) return envOAuth.replace(/\/$/, '');
+  const base = getApiBaseUrl();
+  if (/^https?:\/\//i.test(base)) return base.replace(/\/api\/?$/i, '');
+  return PRODUCTION_API_ORIGIN;
+}
+
 /**
- * Resolves API base URL for desktop, LAN, and ngrok/mobile access.
- * - Use VITE_API_URL=/api with Vite proxy (recommended for ngrok → frontend tunnel)
- * - Or set VITE_API_URL=https://your-backend.ngrok.app/api for a separate API tunnel
+ * API base URL (VITE_API_URL overrides everything).
+ * - Dev default `/api` — Vite proxies to your PC backend; works on phone over Wi‑Fi too.
+ * - Prod default Render API — or use `/api` on Vercel with vercel.json proxy.
+ * - Do not use http://localhost:5000 in .env if you test login on a phone.
  */
 export function getApiBaseUrl() {
-  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
-  const { hostname } = window.location;
-  const onLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-
-  if (envUrl.startsWith('/')) {
-    return envUrl.replace(/\/$/, '') || '/api';
-  }
-
-  if (envUrl && /localhost|127\.0\.0\.1/i.test(envUrl) && !onLocalhost) {
-    return '/api';
-  }
-
-  if (envUrl) {
-    return envUrl.replace(/\/$/, '');
-  }
-
-  // Hosted frontend without VITE_API_URL at build time (e.g. Vercel env missing)
-  if (!onLocalhost) {
-    return 'https://gadkille-backend-clean.onrender.com/api';
-  }
-
-  return '/api';
+  const envUrl = String(import.meta.env.VITE_API_URL || '').trim();
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  if (import.meta.env.DEV) return '/api';
+  return PRODUCTION_API;
 }
 
-/** Origin for API-served media (/images, /uploads) */
 export function getApiOrigin() {
   const base = getApiBaseUrl();
-  if (base.startsWith('http')) {
+  if (/^https?:\/\//i.test(base)) {
     return base.replace(/\/api\/?$/i, '');
   }
-  return window.location.origin;
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return '';
 }
 
-/**
- * Resolve image/video paths for dev and production.
- * - Absolute URLs (https://...) unchanged
- * - /images/ and /uploads/ → API host (Render backend)
- * - Other root paths (/hero-fort.png) → frontend static files
- */
 export function resolveMediaUrl(path) {
   if (!path) return '';
   const value = String(path).trim();
@@ -54,9 +45,21 @@ export function resolveMediaUrl(path) {
   return value;
 }
 
-/** Full URL to start Google OAuth (must hit the backend, not the static frontend host). */
 export function getGoogleAuthUrl() {
-  const base = `${getApiOrigin()}/api/auth/google`;
   const returnTo = encodeURIComponent(window.location.origin);
-  return `${base}?returnTo=${returnTo}`;
+  return `${getOAuthApiOrigin()}/api/auth/google?returnTo=${returnTo}`;
+}
+
+/** Human-readable API target (login + forts use the same server). */
+export function getApiConnectionLabel() {
+  const base = getApiBaseUrl();
+  if (/^https?:\/\//i.test(base)) return base;
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${base.startsWith('/') ? base : `/${base}`}`;
+  }
+  return base;
+}
+
+export function isUsingProductionApi() {
+  return getApiBaseUrl().includes('onrender.com');
 }

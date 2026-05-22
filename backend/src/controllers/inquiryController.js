@@ -28,6 +28,9 @@ const createInquiry = asyncHandler(async (req, res) => {
   if (category === 'plan_trip' && !location) {
     return res.status(400).json({ message: 'Location is required for plan trip' });
   }
+  if (category === 'plan_trip' && tripType === 'group' && !groupSize) {
+    return res.status(400).json({ message: 'Group size is required for group trip' });
+  }
 
   const inquiry = await Inquiry.create({
     category,

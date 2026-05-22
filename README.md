@@ -18,8 +18,20 @@ PORT=5000
 MONGO_URI=mongodb://localhost:27017
 MONGO_DB_NAME=gadkille
 JWT_SECRET=your_strong_secret_here
+JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+
+# Email (SMTP) — required in production for verification & password reset
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM="GadKille" <noreply@gadkille.com>
 ```
+
+Without SMTP, the API logs OTP/reset tokens to the console in development.
 
 4. Run dev server: `npm run dev`
 
@@ -28,7 +40,7 @@ Key files:
 - `src/server.js` – Express app, CORS, routes
 - `src/config/db.js` – Mongo connection
 - `src/models` – `User`, `Fort`, `Booking`, `Vendor`
-- `src/routes/authRoutes.js` – register/login (JWT + bcrypt)
+- `src/routes/authRoutes.js` – register, login, email verification (OTP + link), forgot/reset password (JWT + bcrypt, rate limits, helmet)
 - `src/routes/fortRoutes.js` – public fort listing + admin CRUD
 - `src/middleware/authMiddleware.js` – `protect` + `adminOnly`
 
@@ -61,7 +73,7 @@ Key front-end pieces:
 - Pages:
   - `src/pages/HomePage.jsx` – hero with fort imagery, search bar, featured fort cards
   - `src/pages/FortDetailsPage.jsx` – routes (bus/train/private/trek), facilities, placeholders for map & weather
-  - `src/pages/auth/LoginPage.jsx` and `RegisterPage.jsx`
+  - `src/pages/auth/` – login, register, verify email, forgot/reset password
   - `src/pages/dashboard/UserDashboardPage.jsx` – placeholders for bookings, receipts, saved forts
   - `src/pages/dashboard/AdminDashboardPage.jsx` – placeholders for analytics, forts/vendors/users management
 

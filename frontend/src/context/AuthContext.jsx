@@ -21,16 +21,36 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('gadkille_token'));
   const [loading, setLoading] = useState(false);
 
+  const fetchMeWithRetry = async (maxAttempts = 6) => {
+    let lastError;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        return await axios.get('/auth/me');
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        const retryable = !status || status === 503 || status >= 500;
+        if (!retryable || attempt === maxAttempts - 1) break;
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
+    throw lastError;
+  };
+
   const authenticateWithToken = useCallback(
     async (tokenValue) => {
       if (!tokenValue) return null;
-      persistSession(tokenValue, setToken, setUser);
+      const cleanToken = String(tokenValue).trim();
+      persistSession(cleanToken, setToken, setUser);
       try {
-        const res = await axios.get('/auth/me');
+        const res = await fetchMeWithRetry();
         setUser(res.data.user);
         return res.data.user;
-      } catch {
+      } catch (err) {
         clearSession(setToken, setUser);
+        if (import.meta.env.DEV) {
+          console.error('[auth] Google session failed:', err.response?.data || err.message);
+        }
         return null;
       }
     },
@@ -61,6 +81,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const checkEmail = async (email) => {
+    try {
+      const res = await axios.post('/auth/check-email', { email: email.trim() });
+      return { success: true, ...res.data };
+    } catch (err) {
+      if (err.response?.status === 404) {
+        return {
+          success: true,
+          exists: null,
+          verified: null,
+          legacyMode: true,
+        };
+      }
+      const message =
+        err.response?.data?.message ||
+        (err.request && !err.response
+          ? 'Cannot reach server. Start the backend (npm run dev) or check your connection.'
+          : null) ||
+        'Could not check email';
+      return { success: false, message };
+    }
+  };
+
   const login = async (email, password) => {
     setLoading(true);
     try {
@@ -69,9 +112,27 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: res.data.user };
     } catch (err) {
       const data = err.response?.data;
+      const message =
+        data?.message ||
+        (typeof data === 'string' ? data : null) ||
+        (err.request && !err.response
+          ? 'Cannot reach server. On mobile, use the live site or same Wi‑Fi as your PC — not localhost.'
+          : null) ||
+        err.message ||
+        'Login failed';
+      let hint = '';
+      if (data?.message === 'Invalid credentials') {
+        const onRender =
+          String(import.meta.env.VITE_API_URL || '').includes('onrender') ||
+          (!import.meta.env.VITE_API_URL && !import.meta.env.DEV);
+        if (onRender) {
+          hint =
+            ' Try live admin: admin@gadkille.local / Admin@12345 — or set ADMIN_EMAIL and ADMIN_PASSWORD on Render and redeploy.';
+        }
+      }
       return {
         success: false,
-        message: data?.message || 'Login failed',
+        message: (message || 'Login failed') + hint,
         code: data?.code,
         email: data?.email,
       };
@@ -234,6 +295,7 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         authenticateWithToken,
+        checkEmail,
         login,
         register,
         verifyEmail,

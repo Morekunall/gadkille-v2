@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../../lib/axiosAuth';
 import { useUi } from '../../context/UiContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,7 +14,7 @@ const UserDashboardPage = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/bookings/my`);
+        const res = await axios.get(`/bookings/my`);
         setBookings(res.data);
       } catch (err) {
         // silent for starter
@@ -31,7 +31,7 @@ const UserDashboardPage = () => {
 
   const cancelBooking = async (id) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/bookings/${id}`);
+      await axios.delete(`/bookings/${id}`);
       setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, paymentStatus: 'cancelled' } : b)));
       showToast(
         'success',

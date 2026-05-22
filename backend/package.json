@@ -1,13 +1,14 @@
 {
   "name": "gadkille-backend",
   "version": "1.0.0",
-  "description": "Backend API for Gadkille fort tourism platform",
+  "description": "Backend API for GadKille fort tourism platform",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:visapur": "node src/seeds/seedVisapur.js",
-    "seed:admin": "node src/seeds/seedAdmin.js"
+    "seed:admin": "node src/seeds/seedAdmin.js",
+    "reset:ownership": "node src/scripts/resetOwnershipData.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -15,10 +16,14 @@
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.3.4",
     "morgan": "^1.10.0",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "nodemailer": "^6.10.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

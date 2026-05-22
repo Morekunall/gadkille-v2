@@ -20,7 +20,8 @@ const run = async () => {
       name: ADMIN_NAME,
       email: ADMIN_EMAIL,
       password: hashedPassword,
-      role: 'admin'
+      role: 'admin',
+      isEmailVerified: true,
     },
     { upsert: true, new: true }
   );

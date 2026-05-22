@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { useMemo } from 'react';
+import FortGrid from '../components/forts/FortGrid';
+import { useForts } from '../hooks/useForts';
 import { useUi } from '../context/UiContext';
 
 const websiteFeatures = [
@@ -81,22 +81,8 @@ const normalizeRegion = (location) => {
 
 const ExplorePage = () => {
   const { language } = useUi();
-  const [forts, setForts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { forts, loading, error: fetchError } = useForts();
   const isEnglish = language === 'en';
-
-  useEffect(() => {
-    const fetchForts = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/forts`);
-        setForts(res.data || []);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchForts();
-  }, []);
 
   const groupedForts = useMemo(() => {
     return forts.reduce((acc, fort) => {
@@ -109,6 +95,11 @@ const ExplorePage = () => {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      {fetchError && (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {fetchError}
+        </div>
+      )}
       <section className="rounded-3xl bg-white p-6 shadow-soft">
         <h1 className="text-2xl font-semibold text-primaryDark">
           {isEnglish ? 'Explore Forts' : 'किल्ले एक्सप्लोर करा'}
@@ -119,31 +110,24 @@ const ExplorePage = () => {
             : 'प्रांतानुसार किल्ले पाहा आणि पुढच्या प्रवासाची सुरुवात करा.'}
         </p>
 
-        {loading ? (
-          <div className="mt-4 h-28 animate-pulse rounded-2xl bg-softBg" />
-        ) : (
-          <div className="mt-6 space-y-5">
-            {Object.entries(groupedForts).map(([region, items]) => (
-              <div key={region}>
-                <h2 className="text-sm font-semibold text-primaryDark">{region}</h2>
-                <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map((fort) => (
-                    <article key={fort._id} className="rounded-2xl bg-softBg p-3">
-                      <p className="text-sm font-semibold text-primaryDark">{fort.name}</p>
-                      <p className="mt-1 text-xs text-gray-600">{fort.location}</p>
-                      <Link
-                        to={`/fort/${fort.slug}`}
-                        className="mt-2 inline-block text-xs font-semibold text-primary hover:text-primaryDark"
-                      >
-                        {isEnglish ? 'View details' : 'तपशील पहा'}
-                      </Link>
-                    </article>
-                  ))}
-                </div>
+        <div className="mt-6 space-y-8">
+          {Object.entries(groupedForts).map(([region, items]) => (
+            <div key={region}>
+              <h2 className="text-lg font-semibold text-primaryDark">{region}</h2>
+              <div className="mt-3">
+                <FortGrid
+                  forts={items}
+                  loading={loading}
+                  language={language}
+                  skeletonCount={items.length || 3}
+                />
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+          {!loading && forts.length === 0 && (
+            <FortGrid forts={[]} loading={false} language={language} />
+          )}
+        </div>
       </section>
 
       <section className="mt-6 rounded-3xl bg-white p-6 shadow-soft">

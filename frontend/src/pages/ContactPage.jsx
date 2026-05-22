@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import axios from '../lib/axiosAuth';
 import { useUi } from '../context/UiContext';
 
 const initialForm = {
@@ -32,7 +32,7 @@ const ContactPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/inquiries`, {
+      await axios.post(`/inquiries`, {
         category: 'contact',
         name: form.name,
         phone: form.phone,

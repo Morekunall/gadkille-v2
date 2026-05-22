@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      dbName: process.env.MONGO_DB_NAME || 'gadkille'
+      dbName: process.env.MONGO_DB_NAME || 'gadkille',
+      serverSelectionTimeoutMS: 15000,
     });
     console.log(`MongoDB connected: ${conn.connection.host}`);
   } catch (error) {
