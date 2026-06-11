@@ -129,6 +129,10 @@ const startServer = async () => {
     } else {
       console.log('[seed] Skipped in production (deleted forts stay deleted). Set SEED_FORTS_ON_START=true only for empty DB demo.');
     }
+
+    verifyEmailConfig().catch((err) => {
+      console.warn('[email] Startup email check:', err.message);
+    });
   } catch (error) {
     console.error('Startup initialization error:', error.message);
   }

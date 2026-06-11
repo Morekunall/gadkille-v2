@@ -55,7 +55,10 @@ const sendBookingCongratulationsSafe = async (booking) => {
       console.log(`[email] Booking confirmed email (${booking.bookingType}) sent to ${email}`);
       return { sent: true };
     }
-    return { sent: false, error: result.error || 'Email could not be sent.' };
+    return {
+      sent: false,
+      error: result.error || 'Email could not be sent. Configure RESEND_API_KEY on Render.',
+    };
   } catch (err) {
     logEmailFailure('Booking confirmation', err);
     return { sent: false, error: err.message || 'Email send failed' };

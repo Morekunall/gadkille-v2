@@ -1,9 +1,30 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 let transporter;
+let resendClient;
+let smtpSkippedOnRenderLogged = false;
+
+const isProduction = () => process.env.NODE_ENV === 'production';
+const isRenderHost = () => process.env.RENDER === 'true' || Boolean(process.env.RENDER_SERVICE_ID);
+
+/** Render blocks outbound SMTP (port 587). Use Resend HTTPS API instead. */
+const isSmtpBlockedHost = () =>
+  isProduction() && isRenderHost() && process.env.SMTP_ALLOW_ON_RENDER !== 'true';
+
+const resendSetupHint =
+  'Add RESEND_API_KEY on Render (https://resend.com → API Keys). SMTP port 587 is blocked on Render.';
 
 const getTransporter = () => {
   if (transporter) return transporter;
+
+  if (isSmtpBlockedHost()) {
+    if (!smtpSkippedOnRenderLogged) {
+      smtpSkippedOnRenderLogged = true;
+      console.warn(`[email] SMTP disabled on Render — ${resendSetupHint}`);
+    }
+    return null;
+  }
 
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE } = process.env;
 
@@ -51,14 +72,93 @@ const escapeHtml = (str) =>
 
 const isDev = () => process.env.NODE_ENV !== 'production';
 
+const resendFromAddress = () => {
+  const raw =
+    process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Gadkille <onboarding@resend.dev>';
+  return String(raw).trim().replace(/^["']|["']$/g, '');
+};
+
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
+  if (!resendClient) {
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+};
+
+const getEmailConfigStatus = () => {
+  const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
+  const hasSmtpVars = Boolean(
+    process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  );
+  const smtpBlocked = isSmtpBlockedHost();
+  const smtpUsable = hasSmtpVars && !smtpBlocked;
+  const configured = hasResend || smtpUsable;
+
+  let hint = null;
+  if (!configured) {
+    hint = isRenderHost() ? resendSetupHint : 'Set RESEND_API_KEY or SMTP_HOST, SMTP_USER, SMTP_PASS.';
+  } else if (hasSmtpVars && smtpBlocked && !hasResend) {
+    hint = `SMTP vars are set but ignored on Render. ${resendSetupHint}`;
+  }
+
+  return {
+    configured,
+    provider: hasResend ? 'resend' : smtpUsable ? 'smtp' : null,
+    resend: hasResend,
+    smtp: smtpUsable,
+    smtpBlockedOnRender: smtpBlocked && hasSmtpVars,
+    hint,
+  };
+};
+
+const sendViaResend = async ({ to, subject, html, text }) => {
+  const resend = getResendClient();
+  if (!resend) return null;
+
+  const { data, error } = await resend.emails.send({
+    from: resendFromAddress(),
+    to: [to],
+    subject,
+    html,
+    text: text || undefined,
+  });
+
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error));
+  }
+
+  return { provider: 'resend', id: data?.id };
+};
+
 const sendMail = async ({ to, subject, html, text }) => {
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+
+  if (resendKey) {
+    try {
+      await sendViaResend({ to, subject, html, text });
+      console.log(`[email] Sent via Resend → ${to}`);
+      return { devMode: false, sent: true, provider: 'resend' };
+    } catch (err) {
+      console.error('[email] Resend failed:', err.message);
+      if (!getTransporter()) {
+        return { devMode: false, sent: false, error: err.message, provider: 'resend' };
+      }
+      console.warn('[email] Falling back to SMTP after Resend failure…');
+    }
+  }
+
   const transport = getTransporter();
 
   if (!transport) {
-    console.warn('[email] SMTP not configured — email not sent.');
+    const error = isSmtpBlockedHost()
+      ? resendSetupHint
+      : 'Email not configured. Set RESEND_API_KEY or SMTP_HOST, SMTP_USER, SMTP_PASS.';
+    console.warn(`[email] ${error}`);
     console.warn(`[email] To: ${to} | Subject: ${subject}`);
     if (text) console.warn(`[email] Body:\n${text}`);
-    return { devMode: true, sent: false };
+    return { devMode: !isProduction(), sent: false, error };
   }
 
   try {
@@ -69,12 +169,18 @@ const sendMail = async ({ to, subject, html, text }) => {
       html,
       text,
     });
-    return { devMode: false, sent: true };
+    console.log(`[email] Sent via SMTP → ${to}`);
+    return { devMode: false, sent: true, provider: 'smtp' };
   } catch (err) {
-    console.error('[email] Failed to send:', err.message);
+    const hint =
+      err.message?.includes('timeout') ||
+      err.message?.includes('ETIMEDOUT') ||
+      isSmtpBlockedHost()
+        ? resendSetupHint
+        : err.message;
+    console.error('[email] SMTP failed:', hint);
     console.warn(`[email] To: ${to} | Subject: ${subject}`);
-    if (text) console.warn(`[email] Body (fallback):\n${text}`);
-    return { devMode: true, sent: false, error: err.message };
+    return { devMode: false, sent: false, error: hint, provider: 'smtp' };
   }
 };
 
@@ -257,6 +363,9 @@ module.exports = {
   sendBookingCongratulationsEmail,
   sendBookingConfirmationEmail,
   getTransporter,
+  getEmailConfigStatus,
+  isSmtpBlockedHost,
+  sendMail,
   frontendUrl,
   isDev,
 };

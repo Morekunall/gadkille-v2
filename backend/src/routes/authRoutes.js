@@ -7,6 +7,7 @@ const { hashToken, generateOtp, generateSecureToken } = require('../utils/tokenU
 const {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  getEmailConfigStatus,
   frontendUrl,
   isDev,
 } = require('../utils/emailService');
@@ -546,16 +547,14 @@ router.get('/oauth-health', async (req, res) => {
     canQueryUsers &&
     canSignJwt;
 
-  const smtpConfigured = Boolean(
-    envTrim('SMTP_HOST') && envTrim('SMTP_USER') && envTrim('SMTP_PASS')
-  );
+  const email = getEmailConfigStatus();
 
   res.json({
     ok,
     jwtSecretConfigured: Boolean(getAuthJwtSecret()),
     googleClientIdConfigured: Boolean(envTrim('GOOGLE_CLIENT_ID')),
     googleClientSecretConfigured: Boolean(envTrim('GOOGLE_CLIENT_SECRET')),
-    smtpConfigured,
+    email,
     googleRedirectUri: getGoogleRedirectUri(req),
     frontendUrl: frontendUrl(),
     mongoState: mongoStateLabel,
@@ -726,7 +725,7 @@ router.post(
 
       res.json({
         message:
-          'We could not send the email. Check SMTP settings or use the development link below.',
+          'We could not send the email. Set RESEND_API_KEY on the server or use the development link below.',
         emailSent: false,
         ...(isDev() ? { devResetLink: resetLink } : {}),
       });

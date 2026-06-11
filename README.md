@@ -22,16 +22,12 @@ JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 
-# Email (SMTP) — required in production for verification & password reset
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-EMAIL_FROM="GadKille" <noreply@gadkille.com>
+# Email (Resend) — required in production for verification & password reset
+RESEND_API_KEY=re_xxxxxxxxxxxx
+RESEND_FROM=Gadkille <onboarding@resend.dev>
 ```
 
-Without SMTP, the API logs OTP/reset tokens to the console in development.
+On Render, use Resend (HTTPS API). Gmail SMTP port 587 is blocked. Without email configured, the API logs OTP/reset tokens to the console in development.
 
 4. Run dev server: `npm run dev`
 
