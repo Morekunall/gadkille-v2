@@ -1,0 +1,14 @@
+# Render Static Site — connect repo root OR set root directory to "frontend"
+services:
+  - type: web
+    name: gadkille-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://gadkille-backend-clean.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,0 +1,10 @@
+[35mbackend/node_modules/.package-lock.json[m[36m:[m    "node_modules/[1;31mnodemailer[m": {
+[35mbackend/node_modules/.package-lock.json[m[36m:[m      "resolved": "https://registry.npmjs.org/[1;31mnodemailer[m/-/[1;31mnodemailer[m-6.10.1.tgz",
+[35mbackend/node_modules/iconv-lite/README.md[m[36m:[m   [Grunt](http://gruntjs.com/), [Nodemailer](http://www.[1;31mnodemailer[m.com/), [Yeoman](http://yeoman.io/) and others.
+[35mbackend/package-lock.json[m[36m:[m        "[1;31mnodemailer[m": "^6.10.1"
+[35mbackend/package-lock.json[m[36m:[m    "node_modules/[1;31mnodemailer[m": {
+[35mbackend/package-lock.json[m[36m:[m      "resolved": "https://registry.npmjs.org/[1;31mnodemailer[m/-/[1;31mnodemailer[m-6.10.1.tgz",
+[35mbackend/package.json[m[36m:[m    "[1;31mnodemailer[m": "^6.10.1"
+[35mbackend/src/utils/emailService.js[m[36m:[mconst [1;31mnodemailer[m = require('[1;31mnodemailer[m');
+[35mbackend/src/utils/emailService.js[m[36m:[m  transporter = [1;31mnodemailer[m.createTransport({
+[35mnode_modules/iconv-lite/README.md[m[36m:[m  [Grunt](http://gruntjs.com/), [Nodemailer](http://www.[1;31mnodemailer[m.com/), [Yeoman](http://yeoman.io/) and others.
