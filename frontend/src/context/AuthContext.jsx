@@ -1,31 +1,31 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import axios from '../lib/axiosAuth';
+import * as authApi from '../api/auth';
+import { TOKEN_KEY } from '../lib/axiosAuth';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 
 const AuthContext = createContext(null);
 
-const persistSession = (token, setToken, setUser) => {
+const persistSession = (token, setToken) => {
   setToken(token);
-  localStorage.setItem('gadkille_token', token);
-  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+  localStorage.setItem(TOKEN_KEY, token);
 };
 
 const clearSession = (setToken, setUser) => {
   setUser(null);
   setToken(null);
-  localStorage.removeItem('gadkille_token');
-  delete axios.defaults.headers.common.Authorization;
+  localStorage.removeItem(TOKEN_KEY);
 };
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('gadkille_token'));
+  const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(false);
 
   const fetchMeWithRetry = async (maxAttempts = 6) => {
     let lastError;
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
-        return await axios.get('/auth/me');
+        return await authApi.getMe();
       } catch (err) {
         lastError = err;
         const status = err.response?.status;
@@ -41,11 +41,11 @@ export const AuthProvider = ({ children }) => {
     async (tokenValue) => {
       if (!tokenValue) return null;
       const cleanToken = String(tokenValue).trim();
-      persistSession(cleanToken, setToken, setUser);
+      persistSession(cleanToken, setToken);
       try {
-        const res = await fetchMeWithRetry();
-        setUser(res.data.user);
-        return res.data.user;
+        const data = await fetchMeWithRetry();
+        setUser(data.user);
+        return data.user;
       } catch (err) {
         clearSession(setToken, setUser);
         if (import.meta.env.DEV) {
@@ -59,32 +59,36 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
       (async () => {
         try {
-          const res = await axios.get('/auth/me');
-          setUser(res.data.user);
+          const data = await authApi.getMe();
+          setUser(data.user);
         } catch {
           clearSession(setToken, setUser);
         }
       })();
     } else {
       setUser(null);
-      delete axios.defaults.headers.common.Authorization;
     }
   }, [token]);
+
+  useEffect(() => {
+    const onUnauthorized = () => clearSession(setToken, setUser);
+    window.addEventListener('gadkille:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('gadkille:unauthorized', onUnauthorized);
+  }, [setToken, setUser]);
 
   const applyAuthResponse = (data) => {
     if (data.token && data.user) {
       setUser(data.user);
-      persistSession(data.token, setToken, setUser);
+      persistSession(data.token, setToken);
     }
   };
 
   const checkEmail = async (email) => {
     try {
-      const res = await axios.post('/auth/check-email', { email: email.trim() });
-      return { success: true, ...res.data };
+      const data = await authApi.checkEmail(email);
+      return { success: true, ...data };
     } catch (err) {
       if (err.response?.status === 404) {
         return {
@@ -94,32 +98,22 @@ export const AuthProvider = ({ children }) => {
           legacyMode: true,
         };
       }
-      const message =
-        err.response?.data?.message ||
-        (err.request && !err.response
-          ? 'Cannot reach server. Start the backend (npm run dev) or check your connection.'
-          : null) ||
-        'Could not check email';
-      return { success: false, message };
+      return {
+        success: false,
+        message: getApiErrorMessage(err, 'Could not check email'),
+      };
     }
   };
 
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/login', { email, password });
-      applyAuthResponse(res.data);
-      return { success: true, user: res.data.user };
+      const data = await authApi.login(email, password);
+      applyAuthResponse(data);
+      return { success: true, user: data.user };
     } catch (err) {
       const data = err.response?.data;
-      const message =
-        data?.message ||
-        (typeof data === 'string' ? data : null) ||
-        (err.request && !err.response
-          ? 'Cannot reach server. On mobile, use the live site or same Wi‑Fi as your PC — not localhost.'
-          : null) ||
-        err.message ||
-        'Login failed';
+      const message = getApiErrorMessage(err, 'Login failed');
       let hint = '';
       if (data?.message === 'Invalid credentials') {
         const onRender =
@@ -132,7 +126,7 @@ export const AuthProvider = ({ children }) => {
       }
       return {
         success: false,
-        message: (message || 'Login failed') + hint,
+        message: message + hint,
         code: data?.code,
         email: data?.email,
       };
@@ -144,24 +138,17 @@ export const AuthProvider = ({ children }) => {
   const register = async (payload) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/register', payload);
+      const data = await authApi.register(payload);
       return {
         success: true,
-        message: res.data.message,
-        email: res.data.email,
+        message: data.message,
+        email: data.email,
         requiresVerification: true,
-        devOtp: res.data.devOtp,
-        devVerifyLink: res.data.devVerifyLink,
+        devOtp: data.devOtp,
+        devVerifyLink: data.devVerifyLink,
       };
     } catch (err) {
-      const data = err.response?.data;
-      const message =
-        data?.message ||
-        (typeof data === 'string' ? data : null) ||
-        (err.request ? 'Cannot reach server. Check your connection and try again.' : null) ||
-        err.message ||
-        'Registration failed';
-      return { success: false, message };
+      return { success: false, message: getApiErrorMessage(err, 'Registration failed') };
     } finally {
       setLoading(false);
     }
@@ -170,14 +157,11 @@ export const AuthProvider = ({ children }) => {
   const verifyEmail = async (email, otp) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/verify-email', { email, otp });
-      applyAuthResponse(res.data);
-      return { success: true, message: res.data.message, user: res.data.user };
+      const data = await authApi.verifyEmail(email, otp);
+      applyAuthResponse(data);
+      return { success: true, message: data.message, user: data.user };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Verification failed',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Verification failed') };
     } finally {
       setLoading(false);
     }
@@ -186,19 +170,14 @@ export const AuthProvider = ({ children }) => {
   const verifyEmailByToken = async (verifyToken) => {
     setLoading(true);
     try {
-      const res = await axios.get('/auth/verify-email', {
-        params: { token: verifyToken },
-      });
-      if (res.data.alreadyVerified) {
-        return { success: true, alreadyVerified: true, message: res.data.message };
+      const data = await authApi.verifyEmailByToken(verifyToken);
+      if (data.alreadyVerified) {
+        return { success: true, alreadyVerified: true, message: data.message };
       }
-      applyAuthResponse(res.data);
-      return { success: true, message: res.data.message, user: res.data.user };
+      applyAuthResponse(data);
+      return { success: true, message: data.message, user: data.user };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Verification failed',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Verification failed') };
     } finally {
       setLoading(false);
     }
@@ -207,13 +186,10 @@ export const AuthProvider = ({ children }) => {
   const resendVerification = async (email) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/resend-verification', { email });
-      return { success: true, message: res.data.message };
+      const data = await authApi.resendVerification(email);
+      return { success: true, message: data.message };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Could not resend code',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Could not resend code') };
     } finally {
       setLoading(false);
     }
@@ -222,33 +198,27 @@ export const AuthProvider = ({ children }) => {
   const forgotPassword = async (email) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/forgot-password', { email });
+      const data = await authApi.forgotPassword(email);
       return {
         success: true,
-        message: res.data.message,
-        emailSent: res.data.emailSent,
-        devResetLink: res.data.devResetLink,
+        message: data.message,
+        emailSent: data.emailSent,
+        devResetLink: data.devResetLink,
       };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Request failed',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Request failed') };
     } finally {
       setLoading(false);
     }
   };
 
-  const resetPassword = async (token, password) => {
+  const resetPassword = async (tokenValue, password) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/reset-password', { token, password });
-      return { success: true, message: res.data.message };
+      const data = await authApi.resetPassword(tokenValue, password);
+      return { success: true, message: data.message };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Reset failed',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Reset failed') };
     } finally {
       setLoading(false);
     }
@@ -259,14 +229,11 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (payload) => {
     setLoading(true);
     try {
-      const res = await axios.put('/auth/me', payload);
-      setUser(res.data.user);
+      const data = await authApi.updateProfile(payload);
+      setUser(data.user);
       return { success: true };
     } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Update failed',
-      };
+      return { success: false, message: getApiErrorMessage(err, 'Update failed') };
     } finally {
       setLoading(false);
     }
@@ -275,14 +242,17 @@ export const AuthProvider = ({ children }) => {
   const completeProfile = async (phone) => {
     setLoading(true);
     try {
-      const res = await axios.post('/auth/complete-profile', { phone });
-      applyAuthResponse(res.data);
-      return { success: true, user: res.data.user, message: res.data.message };
-    } catch (err) {
+      const data = await authApi.completeProfile(phone);
+      applyAuthResponse(data);
       return {
-        success: false,
-        message: err.response?.data?.message || 'Could not save phone number',
+        success: true,
+        user: data.user,
+        message: data.message,
+        accountEmailSent: data.accountEmailSent,
+        accountEmailError: data.accountEmailError,
       };
+    } catch (err) {
+      return { success: false, message: getApiErrorMessage(err, 'Could not save phone number') };
     } finally {
       setLoading(false);
     }

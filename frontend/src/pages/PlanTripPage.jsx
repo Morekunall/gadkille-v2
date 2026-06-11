@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import axios from '../lib/axiosAuth';
+import { useMemo, useState } from 'react';
+import { submitInquiry } from '../api/inquiries';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
+import { useForts } from '../hooks/useForts';
 import { useUi } from '../context/UiContext';
 
 const initialForm = {
@@ -19,8 +21,7 @@ const initialForm = {
 const PlanTripPage = () => {
   const { language, showToast } = useUi();
   const [form, setForm] = useState(initialForm);
-  const [forts, setForts] = useState([]);
-  const [fetchError, setFetchError] = useState('');
+  const { forts, error: fetchError } = useForts();
   const [submitting, setSubmitting] = useState(false);
   const [fortSearch, setFortSearch] = useState('');
   const isEnglish = language === 'en';
@@ -36,21 +37,6 @@ const PlanTripPage = () => {
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       .filter((fort) => !query || (fort.name || '').toLowerCase().includes(query));
   }, [forts, fortSearch]);
-
-  useEffect(() => {
-    const fetchForts = async () => {
-      try {
-        const res = await axios.get(`/forts`);
-        setForts(Array.isArray(res.data) ? res.data : []);
-        setFetchError('');
-      } catch (error) {
-        console.error('Plan trip load error:', error);
-        setForts([]);
-        setFetchError('Unable to load fort list. Please check your backend connection.');
-      }
-    };
-    fetchForts();
-  }, []);
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -78,7 +64,7 @@ const PlanTripPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`/inquiries`, {
+      await submitInquiry({
         category: 'plan_trip',
         tripType: form.tripType,
         name: form.name,
@@ -99,8 +85,7 @@ const PlanTripPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (isEnglish ? 'Unable to submit request.' : 'विनंती पाठवता आली नाही.')
+        getApiErrorMessage(err, isEnglish ? 'Unable to submit request.' : 'विनंती पाठवता आली नाही.')
       );
     } finally {
       setSubmitting(false);

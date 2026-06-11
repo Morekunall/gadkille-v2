@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import axios from '../../lib/axiosAuth';
+import {
+  deleteBookingAdmin,
+  getAllBookings,
+  updateBookingStatus,
+} from '../../api/bookings';
+import {
+  createFort,
+  deleteFort as deleteFortApi,
+  getForts,
+  updateFort,
+} from '../../api/forts';
+import { getInquiries } from '../../api/inquiries';
+import { uploadFortVideos as uploadFortVideosApi, uploadStayImages as uploadStayImagesApi } from '../../api/uploads';
+import {
+  createVendor,
+  deleteVendor as deleteVendorApi,
+  getVendors,
+  updateVendor,
+} from '../../api/vendors';
+import { getApiErrorMessage } from '../../lib/getApiErrorMessage';
 import { isUsingProductionApi } from '../../lib/api';
 import { useUi } from '../../context/UiContext';
 import HistoryManagementTab from '../../components/HistoryManagementTab';
@@ -59,32 +78,31 @@ const AdminDashboardPage = () => {
   });
 
   const reloadForts = async () => {
-    const fRes = await axios.get(`/forts`);
-    setForts(fRes.data);
-    return fRes.data;
+    const data = await getForts();
+    setForts(data);
+    return data;
   };
 
   useEffect(() => {
     const controller = new AbortController();
     const fetchData = async () => {
       try {
-        const [bRes, vRes, fRes, iRes] = await Promise.all([
-          axios.get(`/bookings`, { signal: controller.signal }),
-          axios.get(`/vendors`, { signal: controller.signal }),
-          axios.get(`/forts`, { signal: controller.signal }),
-          axios.get(`/inquiries`, { signal: controller.signal })
+        const [bookingsData, vendorsData, fortsData, inquiriesData] = await Promise.all([
+          getAllBookings({ signal: controller.signal }),
+          getVendors(undefined, { signal: controller.signal }),
+          getForts({ signal: controller.signal }),
+          getInquiries({ signal: controller.signal })
         ]);
         if (controller.signal.aborted) return;
-        setBookings(bRes.data);
-        setVendors(vRes.data);
-        setForts(fRes.data);
-        setInquiries(iRes.data);
+        setBookings(bookingsData);
+        setVendors(vendorsData);
+        setForts(fortsData);
+        setInquiries(inquiriesData);
       } catch (err) {
         if (controller.signal.aborted || err.code === 'ERR_CANCELED') return;
         showToast(
           'error',
-          err.response?.data?.message ||
-            (language === 'en' ? 'Unable to load admin data.' : 'ॲडमिन डेटा लोड करता आला नाही.')
+          getApiErrorMessage(err, language === 'en' ? 'Unable to load admin data.' : 'ॲडमिन डेटा लोड करता आला नाही.')
         );
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -96,11 +114,8 @@ const AdminDashboardPage = () => {
 
   const setBookingStatus = async (booking, requestStatus) => {
     try {
-      const updated = await axios.put(
-        `/bookings/${booking._id}/status`,
-        { requestStatus }
-      );
-      const { congratulationsEmailSent, emailError, ...bookingData } = updated.data;
+      const updated = await updateBookingStatus(booking._id, requestStatus);
+      const { congratulationsEmailSent, emailError, ...bookingData } = updated;
       setBookings((prev) => prev.map((b) => (b._id === booking._id ? bookingData : b)));
       if (requestStatus === 'accepted') {
         showToast(
@@ -122,8 +137,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to update booking.' : 'बुकिंग अपडेट करता आले नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to update booking.' : 'बुकिंग अपडेट करता आले नाही.')
       );
     }
   };
@@ -138,7 +152,7 @@ const AdminDashboardPage = () => {
     if (!ok) return;
 
     try {
-      await axios.delete(`/bookings/${booking._id}/admin`);
+      await deleteBookingAdmin(booking._id);
       setBookings((prev) => prev.filter((b) => b._id !== booking._id));
       showToast(
         'success',
@@ -147,26 +161,21 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to delete booking.' : 'बुकिंग हटवता आले नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to delete booking.' : 'बुकिंग हटवता आले नाही.')
       );
     }
   };
 
   const toggleVendorAvailability = async (vendor) => {
     try {
-      const updated = await axios.put(
-        `/vendors/${vendor._id}`,
-        { availability: !vendor.availability }
-      );
+      const updated = await updateVendor(vendor._id, { availability: !vendor.availability });
       setVendors((prev) =>
-        prev.map((v) => (v._id === vendor._id ? updated.data : v))
+        prev.map((v) => (v._id === vendor._id ? updated : v))
       );
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to update vendor.' : 'वेंडर अपडेट करता आले नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to update vendor.' : 'वेंडर अपडेट करता आले नाही.')
       );
     }
   };
@@ -219,14 +228,14 @@ const AdminDashboardPage = () => {
         fort: vendorForm.fort || undefined
       };
 
-      const res = vendorForm._id
-        ? await axios.put(`/vendors/${vendorForm._id}`, payload)
-        : await axios.post(`/vendors`, payload);
+      const saved = vendorForm._id
+        ? await updateVendor(vendorForm._id, payload)
+        : await createVendor(payload);
 
       setVendors((prev) => {
-        const exists = prev.some((v) => v._id === res.data._id);
-        if (exists) return prev.map((v) => (v._id === res.data._id ? res.data : v));
-        return [res.data, ...prev];
+        const exists = prev.some((v) => v._id === saved._id);
+        if (exists) return prev.map((v) => (v._id === saved._id ? saved : v));
+        return [saved, ...prev];
       });
       resetVendorForm();
       showToast(
@@ -236,8 +245,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to save vendor.' : 'वेंडर सेव्ह करता आला नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to save vendor.' : 'वेंडर सेव्ह करता आला नाही.')
       );
     } finally {
       setSavingVendor(false);
@@ -253,7 +261,7 @@ const AdminDashboardPage = () => {
     );
     if (!ok) return;
     try {
-      await axios.delete(`/vendors/${vendor._id}`);
+      await deleteVendorApi(vendor._id);
       setVendors((prev) => prev.filter((v) => v._id !== vendor._id));
       if (vendorForm._id === vendor._id) resetVendorForm();
       showToast(
@@ -263,8 +271,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to delete vendor.' : 'वेंडर हटवता आला नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to delete vendor.' : 'वेंडर हटवता आला नाही.')
       );
     }
   };
@@ -361,12 +368,8 @@ const AdminDashboardPage = () => {
     if (!files.length) return;
     setUploadingStayIdx(idx);
     try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append('images', file));
-      const res = await axios.post(`/uploads/stay-images`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const uploadedUrls = res.data?.urls || [];
+      const uploadResult = await uploadStayImagesApi(files);
+      const uploadedUrls = uploadResult?.urls || [];
       setFortForm((prev) => {
         const current = prev.stayOptions?.[idx] || {};
         const existing = parseImageUrls(current.imagesText || '');
@@ -382,8 +385,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Photo upload failed.' : 'फोटो अपलोड अयशस्वी.')
+        getApiErrorMessage(err, language === 'en' ? 'Photo upload failed.' : 'फोटो अपलोड अयशस्वी.')
       );
     } finally {
       setUploadingStayIdx(null);
@@ -394,12 +396,8 @@ const AdminDashboardPage = () => {
     const files = Array.from(fileList || []).slice(0, 8);
     if (!files.length) return;
     try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append('images', file));
-      const res = await axios.post(`/uploads/stay-images`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const uploadedUrls = res.data?.urls || [];
+      const uploadResult = await uploadStayImagesApi(files);
+      const uploadedUrls = uploadResult?.urls || [];
       setFortForm((prev) => {
         const existing = parseImageUrls(prev.imagesText || '');
         const merged = [...existing, ...uploadedUrls];
@@ -412,8 +410,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Photo upload failed.' : 'फोटो अपलोड अयशस्वी.')
+        getApiErrorMessage(err, language === 'en' ? 'Photo upload failed.' : 'फोटो अपलोड अयशस्वी.')
       );
     }
   };
@@ -422,12 +419,8 @@ const AdminDashboardPage = () => {
     const files = Array.from(fileList || []).slice(0, 3);
     if (!files.length) return;
     try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append('videos', file));
-      const res = await axios.post(`/uploads/fort-videos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const uploadedUrls = res.data?.urls || [];
+      const uploadResult = await uploadFortVideosApi(files);
+      const uploadedUrls = uploadResult?.urls || [];
       setFortForm((prev) => {
         const existing = parseVideoUrls(prev.videosText || '');
         const merged = [...existing, ...uploadedUrls];
@@ -440,8 +433,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Video upload failed.' : 'व्हिडिओ अपलोड अयशस्वी.')
+        getApiErrorMessage(err, language === 'en' ? 'Video upload failed.' : 'व्हिडिओ अपलोड अयशस्वी.')
       );
     }
   };
@@ -494,14 +486,14 @@ const AdminDashboardPage = () => {
         vehicleRentals: fortForm.vehicleRentals || [],
         mapCoordinates
       };
-      const res = fortForm._id
-        ? await axios.put(`/forts/${fortForm._id}`, payload)
-        : await axios.post(`/forts`, payload);
+      const saved = fortForm._id
+        ? await updateFort(fortForm._id, payload)
+        : await createFort(payload);
 
       setForts((prev) => {
-        const exists = prev.some((f) => f._id === res.data._id);
-        if (exists) return prev.map((f) => (f._id === res.data._id ? res.data : f));
-        return [res.data, ...prev];
+        const exists = prev.some((f) => f._id === saved._id);
+        if (exists) return prev.map((f) => (f._id === saved._id ? saved : f));
+        return [saved, ...prev];
       });
       resetFortForm();
       showToast(
@@ -511,8 +503,7 @@ const AdminDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to save fort.' : 'किल्ला सेव्ह करता आला नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to save fort.' : 'किल्ला सेव्ह करता आला नाही.')
       );
     } finally {
       setSavingFort(false);
@@ -537,7 +528,7 @@ const AdminDashboardPage = () => {
     );
     if (!ok) return;
     try {
-      await axios.delete(`/forts/${fortId}`);
+      await deleteFortApi(fortId);
       if (String(fortForm._id || '') === fortId) resetFortForm();
       await reloadForts();
       showToast(

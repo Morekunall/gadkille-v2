@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import axios from '../lib/axiosAuth';
+import { getForts } from '../api/forts';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 
 export function useForts() {
   const [forts, setForts] = useState([]);
@@ -10,15 +11,15 @@ export function useForts() {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.get('/forts');
-      setForts(Array.isArray(res.data) ? res.data : []);
+      const data = await getForts();
+      setForts(Array.isArray(data) ? data : []);
     } catch (err) {
       setForts([]);
       setError(
-        err.response?.data?.message ||
-          (err.request
-            ? 'Could not load forts. Check your connection or wait for the API to wake up.'
-            : 'Could not load forts.')
+        getApiErrorMessage(
+          err,
+          'Could not load forts. Check your connection or wait for the API to wake up.'
+        )
       );
     } finally {
       setLoading(false);

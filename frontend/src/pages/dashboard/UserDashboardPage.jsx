@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from '../../lib/axiosAuth';
+import { cancelBooking, getMyBookings } from '../../api/bookings';
+import { getApiErrorMessage } from '../../lib/getApiErrorMessage';
 import { useUi } from '../../context/UiContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,8 +15,8 @@ const UserDashboardPage = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`/bookings/my`);
-        setBookings(res.data);
+        const data = await getMyBookings();
+        setBookings(data);
       } catch (err) {
         // silent for starter
       } finally {
@@ -29,9 +30,29 @@ const UserDashboardPage = () => {
     setPhone(user?.phone || '');
   }, [user?.phone]);
 
+  const getRequestStatusDisplay = (requestStatus) => {
+    const status = requestStatus || 'pending';
+    if (status === 'accepted') {
+      return {
+        label: language === 'en' ? 'Accepted ✓' : 'स्वीकृत ✓',
+        badge: 'bg-emerald-50 text-emerald-700',
+      };
+    }
+    if (status === 'rejected') {
+      return {
+        label: language === 'en' ? 'Rejected ✗' : 'नाकारले ✗',
+        badge: 'bg-red-50 text-red-700',
+      };
+    }
+    return {
+      label: language === 'en' ? 'Pending review' : 'प्रलंबित',
+      badge: 'bg-amber-50 text-amber-700',
+    };
+  };
+
   const cancelBooking = async (id) => {
     try {
-      await axios.delete(`/bookings/${id}`);
+      await cancelBooking(id);
       setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, paymentStatus: 'cancelled' } : b)));
       showToast(
         'success',
@@ -40,8 +61,7 @@ const UserDashboardPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Unable to cancel booking.' : 'बुकिंग रद्द करता आले नाही.')
+        getApiErrorMessage(err, language === 'en' ? 'Unable to cancel booking.' : 'बुकिंग रद्द करता आले नाही.')
       );
     }
   };
@@ -70,38 +90,54 @@ const UserDashboardPage = () => {
                     : 'अजून कोणतेही बुकिंग नाही. कोणत्याही किल्ल्याच्या पेजवरून बुकिंग सुरू करा.'}
                 </p>
               ) : (
-                bookings.map((b) => (
-                  <div
-                    key={b._id}
-                    className="flex items-center justify-between rounded-2xl bg-softBg px-3 py-2"
-                  >
-                    <div>
-                      <p className="font-semibold text-primaryDark">
-                        {b.fortId?.name || 'Fort'}
-                      </p>
-                      <p className="text-[10px] text-gray-600">
-                        {new Date(b.date).toLocaleDateString()}{' '}
-                        ·{' '}
-                        {language === 'en'
-                          ? b.bookingType
-                          : b.bookingType === 'stay'
-                          ? 'राहण्याची सोय'
-                          : b.bookingType === 'guide'
-                          ? 'मार्गदर्शक'
-                          : 'वाहन'}{' '}
-                        · {b.paymentStatus}
-                      </p>
+                bookings.map((b) => {
+                  const { label: statusLabel, badge } = getRequestStatusDisplay(b.requestStatus);
+                  const bookingTypeLabel =
+                    language === 'en'
+                      ? b.bookingType
+                      : b.bookingType === 'stay'
+                      ? 'राहण्याची सोय'
+                      : b.bookingType === 'guide'
+                      ? 'मार्गदर्शक'
+                      : 'वाहन';
+                  const canCancel =
+                    b.paymentStatus !== 'cancelled' &&
+                    (b.requestStatus || 'pending') !== 'rejected';
+
+                  return (
+                    <div
+                      key={b._id}
+                      className="flex items-center justify-between gap-3 rounded-2xl bg-softBg px-3 py-2"
+                    >
+                      <div>
+                        <p className="font-semibold text-primaryDark">
+                          {b.fortId?.name || 'Fort'}
+                        </p>
+                        <p className="text-[10px] text-gray-600">
+                          {new Date(b.date).toLocaleDateString()} · {bookingTypeLabel}
+                        </p>
+                        <p className="mt-1 text-[10px]">
+                          <span className={`rounded-full px-2 py-0.5 font-semibold ${badge}`}>
+                            {statusLabel}
+                          </span>
+                          {b.paymentStatus === 'cancelled' && (
+                            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+                              {language === 'en' ? 'Cancelled' : 'रद्द'}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      {canCancel && (
+                        <button
+                          onClick={() => cancelBooking(b._id)}
+                          className="shrink-0 text-[10px] font-semibold text-red-600 hover:text-red-700"
+                        >
+                          {language === 'en' ? 'Cancel' : 'रद्द करा'}
+                        </button>
+                      )}
                     </div>
-                    {b.paymentStatus !== 'cancelled' && (
-                      <button
-                        onClick={() => cancelBooking(b._id)}
-                        className="text-[10px] font-semibold text-red-600 hover:text-red-700"
-                      >
-                        {language === 'en' ? 'Cancel' : 'रद्द करा'}
-                      </button>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

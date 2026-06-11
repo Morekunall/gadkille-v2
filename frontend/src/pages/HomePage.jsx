@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '../components/auth/AuthModal';
-import axios from '../lib/axiosAuth';
+import { getHistories } from '../api/history';
 import { resolveMediaUrl } from '../lib/api';
 import FortGrid from '../components/forts/FortGrid';
 import { useForts } from '../hooks/useForts';
@@ -52,8 +52,8 @@ const HomePage = () => {
       try {
         setFetchError('');
         try {
-          const historiesRes = await axios.get('/history');
-          setHistories(historiesRes.data || []);
+          const historyData = await getHistories();
+          setHistories(historyData || []);
         } catch {
           setHistories([]);
         }

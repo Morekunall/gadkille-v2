@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import axios from '../lib/axiosAuth';
+import { submitInquiry } from '../api/inquiries';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { useUi } from '../context/UiContext';
 
 const initialForm = {
@@ -36,7 +37,7 @@ const GroupToursPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`/inquiries`, {
+      await submitInquiry({
         category: 'group_tour',
         tripType: form.tripType,
         name: form.name,
@@ -53,8 +54,7 @@ const GroupToursPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (isEnglish ? 'Unable to submit request.' : 'विनंती पाठवता आली नाही.')
+        getApiErrorMessage(err, isEnglish ? 'Unable to submit request.' : 'विनंती पाठवता आली नाही.')
       );
     } finally {
       setSubmitting(false);

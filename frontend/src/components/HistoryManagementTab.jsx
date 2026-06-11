@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import axios from '../lib/axiosAuth';
+import {
+  createHistory,
+  deleteHistory as deleteHistoryApi,
+  getHistories,
+  updateHistory,
+} from '../api/history';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 
 const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
   const [histories, setHistories] = useState([]);
@@ -23,15 +29,15 @@ const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
   const fetchHistories = async () => {
     try {
       setLoadingHistories(true);
-      const res = await axios.get(`/history`);
-      setHistories(res.data || []);
+      const data = await getHistories();
+      setHistories(data || []);
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en'
-            ? 'Unable to load history videos.'
-            : 'हिस्ट्री व्हिडिओज लोड करता आले नाही.')
+        getApiErrorMessage(
+          err,
+          language === 'en' ? 'Unable to load history videos.' : 'हिस्ट्री व्हिडिओज लोड करता आले नाही.'
+        )
       );
     } finally {
       setLoadingHistories(false);
@@ -88,22 +94,16 @@ const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
         isActive: historyForm.isActive
       };
 
-      let res;
-      if (historyForm._id) {
-        res = await axios.put(
-          `/history/${historyForm._id}`,
-          payload
-        );
-      } else {
-        res = await axios.post(`/history`, payload);
-      }
+      const saved = historyForm._id
+        ? await updateHistory(historyForm._id, payload)
+        : await createHistory(payload);
 
       setHistories((prev) => {
-        const exists = prev.some((h) => h._id === res.data._id);
+        const exists = prev.some((h) => h._id === saved._id);
         if (exists) {
-          return prev.map((h) => (h._id === res.data._id ? res.data : h));
+          return prev.map((h) => (h._id === saved._id ? saved : h));
         }
-        return [res.data, ...prev];
+        return [saved, ...prev];
       });
 
       resetHistoryForm();
@@ -114,10 +114,10 @@ const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en'
-            ? 'Unable to save history video.'
-            : 'हिस्ट्री व्हिडिओ सेव्ह करता आले नाही.')
+        getApiErrorMessage(
+          err,
+          language === 'en' ? 'Unable to save history video.' : 'हिस्ट्री व्हिडिओ सेव्ह करता आले नाही.'
+        )
       );
     } finally {
       setSavingHistory(false);
@@ -134,7 +134,7 @@ const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
     if (!ok) return;
 
     try {
-      await axios.delete(`/history/${history._id}`);
+      await deleteHistoryApi(history._id);
       setHistories((prev) => prev.filter((h) => h._id !== history._id));
       if (historyForm._id === history._id) resetHistoryForm();
       showToast(
@@ -144,10 +144,10 @@ const HistoryManagementTab = ({ language, showToast, loading, forts }) => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en'
-            ? 'Unable to delete history video.'
-            : 'हिस्ट्री व्हिडिओ हटवता आले नाही.')
+        getApiErrorMessage(
+          err,
+          language === 'en' ? 'Unable to delete history video.' : 'हिस्ट्री व्हिडिओ हटवता आले नाही.'
+        )
       );
     }
   };

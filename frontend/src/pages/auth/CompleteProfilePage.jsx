@@ -43,13 +43,24 @@ const CompleteProfilePage = () => {
       showToast('error', res.message);
       return;
     }
-    showToast(
-      'success',
-      t(
-        'Registration complete! Check your email for confirmation.',
-        'नोंदणी पूर्ण! पुष्टीकरणासाठी ई-मेल तपासा.'
-      )
-    );
+    if (res.accountEmailSent === false) {
+      showToast(
+        'error',
+        res.accountEmailError ||
+          t(
+            'Profile saved, but confirmation email was not sent. Check spam or contact support.',
+            'प्रोफाइल सेव्ह झाली, पण पुष्टी ई-मेल पाठवला नाही. स्पॅम तपासा.'
+          )
+      );
+    } else {
+      showToast(
+        'success',
+        t(
+          'Registration complete! Check your email for account confirmation.',
+          'नोंदणी पूर्ण! खाते पुष्टीकरणासाठी ई-मेल तपासा.'
+        )
+      );
+    }
     navigate(res.user?.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
   };
 
@@ -66,10 +77,10 @@ const CompleteProfilePage = () => {
       title={t('One last step', 'शेवटची पायरी')}
       subtitle={t(
         isNew
-          ? 'We sent a verification email to your inbox. Add your mobile number so GadKille admins can contact you about bookings.'
+          ? 'Your account was created. After you add your mobile number, we will email you a confirmation (check inbox and spam).'
           : 'Add your mobile number so our team can reach you for fort bookings and trip updates.',
         isNew
-          ? 'सत्यापन ई-मेल पाठवला आहे. बुकिंगसाठी आमचा संपर्क साठी मोबाईल नंबर जोडा.'
+          ? 'खाते तयार झाले. मोबाईल नंबर नंतर पुष्टी ई-मेल येईल (इनबॉक्स आणि स्पॅम तपासा).'
           : 'बुकिंग आणि प्रवास अपडेटसाठी मोबाईल नंबर जोडा.'
       )}
       footer={

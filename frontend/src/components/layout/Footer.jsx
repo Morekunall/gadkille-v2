@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useUi } from '../../context/UiContext';
 
 const Footer = () => {
@@ -18,9 +19,9 @@ const Footer = () => {
         <div>
           <h4 className="font-semibold text-primaryDark">{language === 'en' ? 'Quick Links' : 'जलद दुवे'}</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><a href="/" className="hover:text-primaryDark">{language === 'en' ? 'Home' : 'मुख्यपृष्ठ'}</a></li>
-            <li><a href="/explore" className="hover:text-primaryDark">{language === 'en' ? 'Explore' : 'भ्रमंती'}</a></li>
-            <li><a href="/plan-trip" className="hover:text-primaryDark">{language === 'en' ? 'Plan Trip' : 'ट्रिप प्लॅन'}</a></li>
+            <li><Link to="/" className="hover:text-primaryDark">{language === 'en' ? 'Home' : 'मुख्यपृष्ठ'}</Link></li>
+            <li><Link to="/explore" className="hover:text-primaryDark">{language === 'en' ? 'Explore' : 'भ्रमंती'}</Link></li>
+            <li><Link to="/plan-trip" className="hover:text-primaryDark">{language === 'en' ? 'Plan Trip' : 'ट्रिप प्लॅन'}</Link></li>
           </ul>
         </div>
 
@@ -53,4 +54,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

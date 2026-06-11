@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from '../lib/axiosAuth';
+import { createBooking } from '../api/bookings';
+import { getFortBySlug } from '../api/forts';
+import { getVendors } from '../api/vendors';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { resolveMediaUrl } from '../lib/api';
 import { useUi } from '../context/UiContext';
 import { useAuth } from '../context/AuthContext';
@@ -39,12 +42,10 @@ const FortDetailsPage = () => {
     const fetchFort = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`/forts/${slug}`);
-        setFort(res.data);
-        const vendorRes = await axios.get(`/vendors`, {
-          params: { fortId: res.data?._id }
-        });
-        setVendors(vendorRes.data || []);
+        const fortData = await getFortBySlug(slug);
+        setFort(fortData);
+        const vendorData = await getVendors({ fortId: fortData?._id });
+        setVendors(vendorData || []);
       } catch (err) {
         // ignore in starter
       } finally {
@@ -124,7 +125,7 @@ const FortDetailsPage = () => {
         };
       }
 
-      await axios.post(`/bookings`, bookingData);
+      await createBooking(bookingData);
       showToast(
         'success',
         language === 'en'
@@ -134,8 +135,7 @@ const FortDetailsPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (language === 'en' ? 'Booking failed.' : 'बुकिंग अयशस्वी.')
+        getApiErrorMessage(err, language === 'en' ? 'Booking failed.' : 'बुकिंग अयशस्वी.')
       );
     } finally {
       setSubmitting(false);

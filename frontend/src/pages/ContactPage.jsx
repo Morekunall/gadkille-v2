@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import axios from '../lib/axiosAuth';
+import { submitInquiry } from '../api/inquiries';
+import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { useUi } from '../context/UiContext';
 
 const initialForm = {
@@ -32,7 +33,7 @@ const ContactPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post(`/inquiries`, {
+      await submitInquiry({
         category: 'contact',
         name: form.name,
         phone: form.phone,
@@ -45,8 +46,7 @@ const ContactPage = () => {
     } catch (err) {
       showToast(
         'error',
-        err.response?.data?.message ||
-          (isEnglish ? 'Unable to send message.' : 'संदेश पाठवता आला नाही.')
+        getApiErrorMessage(err, isEnglish ? 'Unable to send message.' : 'संदेश पाठवता आला नाही.')
       );
     } finally {
       setSubmitting(false);
