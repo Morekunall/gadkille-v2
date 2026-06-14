@@ -6,6 +6,7 @@ import {
   updateTrek,
 } from '../api/trips';
 import { getApiErrorMessage } from '../lib/getApiErrorMessage';
+import { isUsingProductionApi, resolveMediaUrl } from '../lib/api';
 
 const TRIP_TYPES = ['weekend', 'one-day', 'school', 'family', 'friends', 'adventure'];
 
@@ -76,8 +77,30 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
       duration: trek.duration || '',
       pricePerPerson: trek.pricePerPerson ?? '',
       seatsAvailable: trek.seatsAvailable ?? '',
-      startDate: trek.startDate ? trek.startDate.slice(0, 10) : '',
-      endDate: trek.endDate ? trek.endDate.slice(0, 10) : '',
+      startDate: trek.startDate ? String(trek.startDate).slice(0, 10) : '',
+      endDate: trek.endDate ? String(trek.endDate).slice(0, 10) : '',
+      description: trek.description || '',
+      highlightsText: (trek.highlights || []).join('\n'),
+      coverImage: trek.coverImage || '',
+      isPublished: trek.isPublished !== false,
+      isFeatured: !!trek.isFeatured,
+      featuredOrder: trek.featuredOrder ?? 0,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const applySavedTrekToForm = (trek) => {
+    setTrekForm({
+      _id: trek._id,
+      title: trek.title || '',
+      slug: trek.slug || '',
+      fort: trek.fort?._id || trek.fort || '',
+      tripType: trek.tripType || 'weekend',
+      duration: trek.duration || '',
+      pricePerPerson: trek.pricePerPerson ?? '',
+      seatsAvailable: trek.seatsAvailable ?? '',
+      startDate: trek.startDate ? String(trek.startDate).slice(0, 10) : '',
+      endDate: trek.endDate ? String(trek.endDate).slice(0, 10) : '',
       description: trek.description || '',
       highlightsText: (trek.highlights || []).join('\n'),
       coverImage: trek.coverImage || '',
@@ -131,15 +154,25 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
       };
 
       const saved = trekForm._id
-        ? await updateTrek(trekForm._id, payload)
+        ? await updateTrek(String(trekForm._id), payload)
         : await createTrek(payload);
 
-      setTreks((prev) => {
-        const exists = prev.some((t) => t._id === saved._id);
-        if (exists) return prev.map((t) => (t._id === saved._id ? saved : t));
-        return [saved, ...prev];
-      });
-      resetForm();
+      if (trekForm._id) {
+        applySavedTrekToForm(saved);
+        if (payload.coverImage && !saved.coverImage && isUsingProductionApi()) {
+          showToast(
+            'error',
+            language === 'en'
+              ? 'Cover image was not saved. Deploy the latest backend on Render, then update again.'
+              : 'कव्हर इमेज सेव्ह झाली नाही. Render वर नवीन backend deploy करा आणि पुन्हा अपडेट करा.'
+          );
+          return;
+        }
+      } else {
+        resetForm();
+      }
+
+      await fetchTreks();
       showToast(
         'success',
         language === 'en' ? 'Trek saved.' : 'ट्रेक सेव्ह झाला.'
@@ -209,6 +242,13 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
               ? 'Post treks here (e.g. Ramshej). Toggle "Show on homepage" so users see them in Upcoming Events and can book.'
               : 'येथे ट्रेक पोस्ट करा (उदा. रामशेज). "होमपेजवर दाखवा" चालू केल्यास वापरकर्त्यांना आगामी इव्हेंटमध्ये दिसेल आणि बुकिंग करता येईल.'}
           </p>
+          {isUsingProductionApi() && (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-950">
+              {language === 'en'
+                ? 'Live API (Render): cover image & homepage toggle need the latest backend deployed. Push your code and redeploy Render, then update the trek again.'
+                : 'लाइव API (Render): कव्हर इमेज आणि होमपेज टॉगलसाठी नवीन backend deploy करावा लागेल.'}
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -350,9 +390,21 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
           <input
             value={trekForm.coverImage}
             onChange={(e) => setTrekForm((p) => ({ ...p, coverImage: e.target.value }))}
-            placeholder={language === 'en' ? 'Leave blank to use fort image' : 'किल्ल्याचा फोटो वापरण्यासाठी रिक्त ठेवा'}
+            placeholder={language === 'en' ? 'Paste full image URL (https://...)' : 'पूर्ण इमेज URL चिकटवा (https://...)'}
             className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
           />
+          {trekForm.coverImage ? (
+            <div className="mt-2 overflow-hidden rounded-xl border border-primary/10">
+              <img
+                src={resolveMediaUrl(trekForm.coverImage)}
+                alt={language === 'en' ? 'Cover preview' : 'कव्हर पूर्वावलोकन'}
+                className="h-32 w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          ) : null}
         </div>
         <div className="md:col-span-2">
           <label className="mb-1 block text-[11px] text-gray-700">

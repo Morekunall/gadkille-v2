@@ -74,14 +74,56 @@ router.post('/', protect, adminOnly, async (req, res) => {
   }
 });
 
+const buildTripPayload = (body) => {
+  const payload = {};
+  const assign = (key, transform = (v) => v) => {
+    if (body[key] !== undefined) payload[key] = transform(body[key]);
+  };
+
+  assign('title', (v) => String(v).trim());
+  assign('slug', (v) => String(v).trim().toLowerCase());
+  assign('fort');
+  assign('tripType');
+  assign('duration', (v) => String(v).trim());
+  assign('pricePerPerson', (v) => Number(v));
+  assign('seatsAvailable', (v) => Number(v));
+  assign('startDate');
+  assign('endDate');
+  assign('description', (v) => String(v).trim());
+  assign('highlights', (v) => (Array.isArray(v) ? v : []));
+  assign('coverImage', (v) => String(v || '').trim());
+  assign('isPublished', (v) => !!v);
+  assign('isFeatured', (v) => !!v);
+  assign('featuredOrder', (v) => Number(v) || 0);
+
+  return payload;
+};
+
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const trip = await Trip.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate(
-      populateFort
-    );
+    const payload = buildTripPayload(req.body);
+    if (payload.slug) {
+      const conflict = await Trip.findOne({
+        slug: payload.slug,
+        _id: { $ne: req.params.id },
+      });
+      if (conflict) {
+        return res.status(400).json({ message: 'Slug already exists' });
+      }
+    }
+
+    const trip = await Trip.findByIdAndUpdate(req.params.id, payload, {
+      new: true,
+      runValidators: true,
+      overwrite: false,
+    }).populate(populateFort);
+
     if (!trip) return res.status(404).json({ message: 'Trip not found' });
     res.json(trip);
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });
