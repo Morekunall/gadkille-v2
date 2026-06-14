@@ -2,20 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '../components/auth/AuthModal';
 import { getHistories } from '../api/history';
+import { getUpcomingTreks } from '../api/trips';
 import { resolveMediaUrl } from '../lib/api';
 import FortGrid from '../components/forts/FortGrid';
+import UpcomingTrekCard from '../components/treks/UpcomingTrekCard';
 import { useForts } from '../hooks/useForts';
 import { useAuthOAuthCallback } from '../hooks/useAuthOAuthCallback';
 import { useUi } from '../context/UiContext';
 import VideoModal from '../components/VideoModal';
 import heroImage from '../assets/gad-yatra-hero.png';
-
-const featureData = [
-  { icon: '🚌', title: 'Transport', description: 'Smart route options for buses, cabs, and self-drive trips.' },
-  { icon: '🍲', title: 'Food', description: 'Discover local food stops and meal recommendations nearby.' },
-  { icon: '🏨', title: 'Stay', description: 'Choose curated stays with comfort ratings and amenities.' },
-  { icon: '⛽', title: 'Petrol', description: 'Locate fuel stations and travel essentials on your route.' }
-];
 
 const groupTours = [
   { title: 'School Trips', image: 'https://images.pexels.com/photos/8423393/pexels-photo-8423393.jpeg' },
@@ -38,6 +33,8 @@ const HomePage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { forts, loading: fortsLoading, error: fortsError } = useForts();
   const [histories, setHistories] = useState([]);
+  const [upcomingTreks, setUpcomingTreks] = useState([]);
+  const [treksLoading, setTreksLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFort, setSelectedFort] = useState('');
   const [tripType, setTripType] = useState('Weekend');
@@ -56,6 +53,15 @@ const HomePage = () => {
           setHistories(historyData || []);
         } catch {
           setHistories([]);
+        }
+        try {
+          setTreksLoading(true);
+          const trekData = await getUpcomingTreks({ featured: true });
+          setUpcomingTreks(trekData || []);
+        } catch {
+          setUpcomingTreks([]);
+        } finally {
+          setTreksLoading(false);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -119,39 +125,33 @@ const HomePage = () => {
       )}
 
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-center text-2xl font-semibold text-primaryDark sm:text-2xl">{isEnglish ? 'Essential Trip Features' : 'महत्त्वाची ट्रिप फीचर्स'}</h2>
+        <h2 className="text-center text-2xl font-semibold text-primaryDark sm:text-2xl">
+          {isEnglish ? 'Upcoming Treks & Events' : 'आगामी ट्रेक आणि इव्हेंट्स'}
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-gray-600">
+          {isEnglish
+            ? 'Book curated group treks posted by our team — dates, pricing and seats in one place.'
+            : 'आमच्या टीमने पोस्ट केलेले ग्रुप ट्रेक बुक करा — तारीख, किंमत आणि जागा एकाच ठिकाणी.'}
+        </p>
 
-        <div className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 sm:grid-cols-2 md:grid-cols-4">
-          {featureData.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-primary/10 bg-white/85 p-3 shadow-soft transition hover:-translate-y-1 hover:border-primary/20 sm:p-4 md:p-5"
-            >
-              <div className="text-xl sm:text-2xl">{item.icon}</div>
-              <h3 className="mt-2 text-sm font-semibold text-primaryDark sm:mt-3 sm:text-base md:text-lg">
+        <div className="mt-6 grid gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3">
+          {treksLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-72 animate-pulse rounded-2xl bg-white/85 shadow-soft" />
+            ))
+          ) : upcomingTreks.length > 0 ? (
+            upcomingTreks.slice(0, 6).map((trek) => (
+              <UpcomingTrekCard key={trek._id} trek={trek} language={language} />
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-dashed border-primary/20 bg-white/85 px-6 py-10 text-center shadow-soft">
+              <p className="text-sm text-gray-600">
                 {isEnglish
-                  ? item.title
-                  : item.title === 'Transport'
-                  ? 'प्रवास'
-                  : item.title === 'Food'
-                  ? 'अन्न'
-                  : item.title === 'Stay'
-                  ? 'राहण्याची सोय'
-                  : 'पेट्रोल'}
-              </h3>
-              <p className="mt-1 text-xs leading-relaxed text-gray-600 sm:mt-2 sm:text-sm sm:leading-snug">
-                {isEnglish
-                  ? item.description
-                  : item.title === 'Transport'
-                  ? 'बस, कॅब आणि सेल्फ-ड्राईव्हसाठी स्मार्ट रूट पर्याय.'
-                  : item.title === 'Food'
-                  ? 'स्थानिक फूड स्टॉप्स आणि जेवणाच्या शिफारसी शोधा.'
-                  : item.title === 'Stay'
-                  ? 'सुविधांसह निवडक राहण्याचे पर्याय निवडा.'
-                  : 'तुमच्या मार्गावरील इंधन स्टेशन आणि आवश्यक सेवा शोधा.'}
+                  ? 'No upcoming treks right now. Admin can post treks (e.g. Ramshej) from Admin → Upcoming Treks.'
+                  : 'सध्या आगामी ट्रेक नाहीत. Admin → Upcoming Treks मधून ट्रेक (उदा. रामशेज) पोस्ट करू शकतो.'}
               </p>
-            </article>
-          ))}
+            </div>
+          )}
         </div>
       </section>
 

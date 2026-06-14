@@ -9,6 +9,7 @@ const ADMIN_TABS = [
   { id: 'inquiries', labelEn: 'Inquiries', labelMr: 'चौकशी' },
   { id: 'forts', labelEn: 'Forts', labelMr: 'किल्ले' },
   { id: 'history', labelEn: 'History', labelMr: 'इतिहास' },
+  { id: 'treks', labelEn: 'Upcoming Treks', labelMr: 'आगामी ट्रेक' },
   { id: 'vendors', labelEn: 'Vendors', labelMr: 'वेंडर' },
 ];
 

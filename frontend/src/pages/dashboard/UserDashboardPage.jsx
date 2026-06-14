@@ -94,11 +94,15 @@ const UserDashboardPage = () => {
                   const { label: statusLabel, badge } = getRequestStatusDisplay(b.requestStatus);
                   const bookingTypeLabel =
                     language === 'en'
-                      ? b.bookingType
+                      ? b.bookingType === 'trip'
+                        ? 'Trek'
+                        : b.bookingType
                       : b.bookingType === 'stay'
                       ? 'राहण्याची सोय'
                       : b.bookingType === 'guide'
                       ? 'मार्गदर्शक'
+                      : b.bookingType === 'trip'
+                      ? 'ट्रेक'
                       : 'वाहन';
                   const canCancel =
                     b.paymentStatus !== 'cancelled' &&
@@ -115,6 +119,11 @@ const UserDashboardPage = () => {
                         </p>
                         <p className="text-[10px] text-gray-600">
                           {new Date(b.date).toLocaleDateString()} · {bookingTypeLabel}
+                          {b.bookingType === 'trip' && b.details?.trek?.title
+                            ? ` · ${b.details.trek.title}`
+                            : b.tripId?.title
+                            ? ` · ${b.tripId.title}`
+                            : ''}
                         </p>
                         <p className="mt-1 text-[10px]">
                           <span className={`rounded-full px-2 py-0.5 font-semibold ${badge}`}>

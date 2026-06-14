@@ -47,4 +47,13 @@ const adminOnly = (req, res, next) => {
   return res.status(403).json({ message: 'Admin access only' });
 };
 
-module.exports = { protect, adminOnly };
+/** Sets req.user when a valid Bearer token is present; otherwise continues without auth. */
+const optionalProtect = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+  return protect(req, res, next);
+};
+
+module.exports = { protect, adminOnly, optionalProtect };

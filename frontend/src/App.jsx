@@ -15,15 +15,18 @@ import CompleteProfilePage from './pages/auth/CompleteProfilePage';
 import UserDashboardPage from './pages/dashboard/UserDashboardPage';
 import AdminDashboardPage from './pages/dashboard/AdminDashboardPage';
 import ProtectedRoute from './components/routing/ProtectedRoute';
+import ScrollToTop from './components/routing/ScrollToTop';
 import ExplorePage from './pages/ExplorePage';
 import PlanTripPage from './pages/PlanTripPage';
 import ContactPage from './pages/ContactPage';
+import TrekDetailsPage from './pages/TrekDetailsPage';
 
 function App() {
   return (
     <AuthProvider>
       <UiProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<HomePage />} />
@@ -32,6 +35,7 @@ function App() {
               <Route path="/group-tours" element={<Navigate to="/plan-trip" replace />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/fort/:slug" element={<FortDetailsPage />} />
+              <Route path="/trek/:slug" element={<TrekDetailsPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />

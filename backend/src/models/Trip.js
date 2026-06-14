@@ -17,7 +17,10 @@ const tripSchema = new mongoose.Schema(
     endDate: { type: Date, required: true },
     description: { type: String, default: '' },
     highlights: [{ type: String }],
-    isPublished: { type: Boolean, default: true }
+    coverImage: { type: String, default: '' },
+    isPublished: { type: Boolean, default: true },
+    isFeatured: { type: Boolean, default: false },
+    featuredOrder: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

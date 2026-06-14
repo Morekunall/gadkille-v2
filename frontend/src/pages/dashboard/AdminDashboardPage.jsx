@@ -23,8 +23,9 @@ import { getApiErrorMessage } from '../../lib/getApiErrorMessage';
 import { isUsingProductionApi } from '../../lib/api';
 import { useUi } from '../../context/UiContext';
 import HistoryManagementTab from '../../components/HistoryManagementTab';
+import UpcomingTreksTab from '../../components/UpcomingTreksTab';
 
-const ADMIN_TABS = ['overview', 'requests', 'inquiries', 'forts', 'history', 'vendors'];
+const ADMIN_TABS = ['overview', 'requests', 'inquiries', 'forts', 'history', 'treks', 'vendors'];
 
 const TAB_TITLES = {
   overview: { en: 'Overview', mr: 'माहिती' },
@@ -32,6 +33,7 @@ const TAB_TITLES = {
   inquiries: { en: 'Inquiries', mr: 'चौकशी' },
   forts: { en: 'Fort management', mr: 'किल्ले व्यवस्थापन' },
   history: { en: 'Short history', mr: 'संक्षिप्त इतिहास' },
+  treks: { en: 'Upcoming treks', mr: 'आगामी ट्रेक' },
   vendors: { en: 'Vendors', mr: 'वेंडर' },
 };
 
@@ -577,6 +579,7 @@ const AdminDashboardPage = () => {
           { id: 'inquiries', labelEn: 'Inquiries', labelMr: 'चौकशी' },
           { id: 'forts', labelEn: 'Forts', labelMr: 'किल्ले' },
           { id: 'history', labelEn: 'Short History', labelMr: 'संक्षिप्त इतिहास' },
+          { id: 'treks', labelEn: 'Upcoming Treks', labelMr: 'आगामी ट्रेक' },
           { id: 'vendors', labelEn: 'Vendors', labelMr: 'वेंडर' }
         ].map((t) => (
           <button
@@ -677,6 +680,11 @@ const AdminDashboardPage = () => {
                       {b.bookingType === 'vehicle' && b.details?.vehicle && (
                         <p className="text-[10px] text-primary">🚗 {b.details.vehicle.type}</p>
                       )}
+                      {b.bookingType === 'trip' && (b.tripId?.title || b.details?.trek?.title) && (
+                        <p className="text-[10px] text-primary">
+                          🥾 {b.tripId?.title || b.details?.trek?.title}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
@@ -759,6 +767,17 @@ const AdminDashboardPage = () => {
                           {b.bookingType === 'vehicle' && b.details?.vehicle && (
                             <p className="mt-1 text-[10px] text-primary">
                               🚗 {b.details.vehicle.type} ({b.details.vehicle.model}) · ₹{b.details.vehicle.pricePerDay}/day
+                            </p>
+                          )}
+                          {b.bookingType === 'trip' && (b.tripId?.title || b.details?.trek?.title) && (
+                            <p className="mt-1 text-[10px] text-primary">
+                              🥾 {b.tripId?.title || b.details?.trek?.title}
+                              {b.details?.guests ? ` · ${b.details.guests} ${language === 'en' ? 'travelers' : 'प्रवासी'}` : ''}
+                              {b.details?.trek?.pricePerPerson
+                                ? ` · ₹${b.details.trek.pricePerPerson}/${language === 'en' ? 'person' : 'व्यक्ती'}`
+                                : b.tripId?.pricePerPerson
+                                ? ` · ₹${b.tripId.pricePerPerson}/${language === 'en' ? 'person' : 'व्यक्ती'}`
+                                : ''}
                             </p>
                           )}
                           {b.userId?.email && (
@@ -1535,6 +1554,10 @@ const AdminDashboardPage = () => {
               loading={loading}
               forts={forts}
             />
+          </div>
+
+          <div hidden={tab !== 'treks'}>
+            <UpcomingTreksTab language={language} showToast={showToast} forts={forts} />
           </div>
         </div>
 

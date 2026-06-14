@@ -84,6 +84,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const bookings = await Booking.find({ userId: req.user._id })
       .populate('fortId', 'name location slug')
+      .populate('tripId', 'title slug startDate pricePerPerson')
       .sort({ createdAt: -1 });
     res.json(bookings);
   })
@@ -120,6 +121,7 @@ router.get(
     const bookings = await Booking.find()
       .populate('userId', 'name email phone')
       .populate('fortId', 'name location slug')
+      .populate('tripId', 'title slug startDate pricePerPerson')
       .sort({ createdAt: -1 });
     res.json(bookings);
   })
