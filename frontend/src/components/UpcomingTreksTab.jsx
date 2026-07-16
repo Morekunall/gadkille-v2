@@ -8,6 +8,7 @@ import {
 import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { isUsingProductionApi, resolveMediaUrl } from '../lib/api';
 import { formatInr, getOriginalPrice } from '../lib/trekPricing';
+import CrossedPrice from './treks/CrossedPrice';
 
 const TRIP_TYPES = ['weekend', 'one-day', 'school', 'family', 'friends', 'adventure'];
 
@@ -534,7 +535,7 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
                 <p className="text-[10px] text-gray-600">
                   {trek.fort?.name || 'Fort'} · {new Date(trek.startDate).toLocaleDateString()} ·{' '}
                   {getOriginalPrice(trek) ? (
-                    <span className="text-red-500 line-through">₹{formatInr(getOriginalPrice(trek))}</span>
+                    <CrossedPrice amount={getOriginalPrice(trek)} size="xs" className="mr-1" />
                   ) : null}{' '}
                   ₹{formatInr(trek.pricePerPerson)}
                 </p>

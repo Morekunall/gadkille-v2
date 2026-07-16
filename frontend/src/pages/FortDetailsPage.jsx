@@ -7,6 +7,9 @@ import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { resolveMediaUrl } from '../lib/api';
 import { useUi } from '../context/UiContext';
 import { useAuth } from '../context/AuthContext';
+import SeoHead from '../components/seo/SeoHead';
+import ImageCarousel from '../components/forts/ImageCarousel';
+import { breadcrumbJsonLd, fortJsonLd, getDefaultOgImage } from '../lib/seo';
 
 const FortDetailsPage = () => {
   const { slug } = useParams();
@@ -19,7 +22,6 @@ const FortDetailsPage = () => {
   const [date, setDate] = useState('');
   const [guests, setGuests] = useState(2);
   const [submitting, setSubmitting] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedStay, setSelectedStay] = useState(null);
   const [selectedGuide, setSelectedGuide] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -27,16 +29,6 @@ const FortDetailsPage = () => {
   const [loginPrompt, setLoginPrompt] = useState(false);
   const [vendors, setVendors] = useState([]);
   const resolveImageUrl = resolveMediaUrl;
-
-  // Auto-change image every 5 seconds if multiple images
-  useEffect(() => {
-    if (fort?.images?.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentImageIndex((prev) => (prev + 1) % fort.images.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [fort?.images]);
 
   useEffect(() => {
     const fetchFort = async () => {
@@ -145,10 +137,21 @@ const FortDetailsPage = () => {
   if (loading || !fort) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
+        <SeoHead
+          title="Fort Details"
+          description="Fort trek guide, routes, stays, and booking on GadKille — Maharashtra fort tourism website."
+          path={`/fort/${slug}`}
+        />
         <div className="h-48 animate-pulse rounded-3xl bg-white shadow-soft" />
       </div>
     );
   }
+
+  const fortDescription =
+    fort.description ||
+    fort.history ||
+    `${fort.name} fort trek guide — routes, stays, guides, and booking on GadKille.`;
+  const fortImage = resolveImageUrl(fort.images?.[0] || '') || getDefaultOgImage();
 
   const routesByType = (type) => fort.routes?.filter((r) => r.type === type) || [];
   const vendorStays = (vendors || [])
@@ -192,7 +195,22 @@ const FortDetailsPage = () => {
     );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
+      <SeoHead
+        title={`${fort.name} Fort Trek Guide`}
+        description={fortDescription.slice(0, 160)}
+        path={`/fort/${slug}`}
+        image={fortImage}
+        type="article"
+        jsonLd={[
+          fortJsonLd({ ...fort, images: [fortImage] }, slug),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Explore', path: '/explore' },
+            { name: fort.name, path: `/fort/${slug}` }
+          ])
+        ]}
+      />
       {/* Login Prompt Modal */}
       {loginPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -233,13 +251,13 @@ const FortDetailsPage = () => {
 
       {/* Header */}
       <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
-        <div className="grid gap-4 md:grid-cols-[2fr,1.5fr]">
-          <div className="p-5">
+        <div className="grid gap-0 md:grid-cols-[2fr,1.5fr] md:gap-4">
+          <div className="order-2 p-4 sm:p-5 md:order-1">
             <p className="text-[11px] uppercase tracking-[0.2em] text-accent">
               {language === 'en' ? 'Fort overview' : 'किल्ल्याची माहिती'}
             </p>
-            <h1 className="mt-2 text-2xl font-semibold text-primaryDark">{fort.name}</h1>
-            <p className="mt-1 text-xs text-gray-500">{fort.location}</p>
+            <h1 className="mt-2 text-xl font-semibold text-primaryDark sm:text-2xl">{fort.name}</h1>
+            <p className="mt-1 text-xs text-gray-500 line-clamp-2 sm:line-clamp-none">{fort.location}</p>
             <p className="mt-3 text-xs leading-relaxed text-gray-600">
               {fort.history || fort.description}
             </p>
@@ -265,32 +283,18 @@ const FortDetailsPage = () => {
               </div>
             </div>
           </div>
-          <div className="relative h-48 md:h-full">
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-all duration-500"
-              style={{
-                backgroundImage: `url(${resolveImageUrl(
-                  fort.images?.[currentImageIndex] || fort.images?.[0] || ''
-                )})`
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            {/* Image navigation dots */}
-            {fort.images?.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-                {fort.images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentImageIndex(i)}
-                    className={`h-2 w-2 rounded-full transition-all ${
-                      i === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'
-                    }`}
-                    aria-label={`View image ${i + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <ImageCarousel
+            key={fort._id}
+            images={fort.images || []}
+            resolveUrl={resolveImageUrl}
+            alt={fort.name}
+            className="order-1 h-56 min-h-[14rem] sm:h-64 md:order-2 md:h-full"
+            labels={
+              language === 'en'
+                ? { prev: 'Previous photo', next: 'Next photo', slide: 'View photo' }
+                : { prev: 'मागील फोटो', next: 'पुढील फोटो', slide: 'फोटो पहा' }
+            }
+          />
         </div>
       </div>
 

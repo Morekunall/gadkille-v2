@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import FortGrid from '../components/forts/FortGrid';
 import { useForts } from '../hooks/useForts';
 import { useUi } from '../context/UiContext';
+import SeoHead from '../components/seo/SeoHead';
 
 const websiteFeatures = [
   {
@@ -95,6 +96,11 @@ const ExplorePage = () => {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <SeoHead
+        title="Explore Maharashtra Forts"
+        description="Browse forts by region on GadKille — routes, history, stays, guides, and trek details for Lohagad, Visapur, Ramshej, and more."
+        path="/explore"
+      />
       {fetchError && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {fetchError}

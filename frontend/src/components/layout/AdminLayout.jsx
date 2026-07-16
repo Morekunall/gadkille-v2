@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
+import SeoHead from '../seo/SeoHead';
 import { useUi } from '../../context/UiContext';
 
 const AdminLayout = () => {
@@ -7,6 +8,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
+      <SeoHead title="GadKille Admin" noindex />
       <AdminNavbar />
       <main className="flex-1">
         <Outlet />

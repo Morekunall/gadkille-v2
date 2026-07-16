@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { submitInquiry } from '../api/inquiries';
 import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { useUi } from '../context/UiContext';
+import SeoHead from '../components/seo/SeoHead';
 
 const initialForm = {
   name: '',
@@ -55,6 +56,11 @@ const ContactPage = () => {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
+      <SeoHead
+        title="Contact GadKille"
+        description="Contact the GadKille team for fort trip support, partnerships, school batches, and custom group tour planning in Maharashtra."
+        path="/contact"
+      />
       <div className="rounded-3xl bg-white p-6 shadow-soft">
         <h1 className="text-2xl font-semibold text-primaryDark">
           {isEnglish ? 'Contact Us' : 'संपर्क करा'}

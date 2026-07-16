@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUi } from '../../context/UiContext';
+import gadkilleLogo from '../../assets/gadkille-logo.png';
+import gadkilleLogoMark from '../../assets/gadkille-logo-mark.png';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -19,14 +21,22 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-20 border-b border-primary/10 bg-white/85 backdrop-blur-md shadow-soft">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white font-bold">
-            G
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-primaryDark">GadKille</p>
-            <p className="text-xs text-gray-500">{language === 'en' ? 'Fort Exploration' : 'किल्ले भ्रमंती'}</p>
-          </div>
+        <Link to="/" className="flex shrink-0 items-center gap-2.5">
+          <img
+            src={gadkilleLogoMark}
+            alt=""
+            aria-hidden="true"
+            className="h-10 w-10 shrink-0 object-contain"
+            width={44}
+            height={44}
+          />
+          <img
+            src={gadkilleLogo}
+            alt="GADकिल्ले"
+            className="h-8 w-auto max-w-[120px] object-contain object-left sm:h-9 sm:max-w-[160px]"
+            width={155}
+            height={40}
+          />
         </Link>
 
         <div className="hidden items-center gap-4 md:flex">

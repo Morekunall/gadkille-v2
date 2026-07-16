@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useUi } from '../../context/UiContext';
+import gadkilleLogo from '../../assets/gadkille-logo.png';
+import gadkilleLogoMark from '../../assets/gadkille-logo-mark.png';
 
 const Footer = () => {
   const { language } = useUi();
@@ -8,7 +10,23 @@ const Footer = () => {
     <footer className="mt-10 border-t border-primary/10 bg-gradient-to-b from-white to-[#e1ece7]">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-gray-600 md:grid-cols-4">
         <div>
-          <h3 className="text-lg font-bold text-primaryDark">GadKille</h3>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={gadkilleLogoMark}
+              alt=""
+              aria-hidden="true"
+              className="h-11 w-11 shrink-0 object-contain"
+              width={44}
+              height={44}
+            />
+            <img
+              src={gadkilleLogo}
+              alt="GADकिल्ले"
+              className="h-10 w-auto max-w-[180px] object-contain object-left"
+              width={155}
+              height={40}
+            />
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             {language === 'en'
               ? 'Fort exploration and trip planning platform for modern travelers.'
@@ -28,16 +46,15 @@ const Footer = () => {
         <div>
           <h4 className="font-semibold text-primaryDark">{language === 'en' ? 'Contact' : 'संपर्क'}</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li>{language === 'en' ? 'Email' : 'ई-मेल'}: kunalrmore@gmail.com</li>
+            <li>{language === 'en' ? 'Email' : 'ई-मेल'}: gadkille.co@gmail.com</li>
             <li>{language === 'en' ? 'Phone' : 'फोन'}: +91 84326 60285</li>
             <li>{language === 'en' ? 'Pune, Maharashtra, India' : 'पुणे, महाराष्ट्र, भारत'}</li>
           </ul>
         </div>
-
         <div>
           <h4 className="font-semibold text-primaryDark">{language === 'en' ? 'Follow Us' : 'आमच्याशी जोडा'}</h4>
           <div className="mt-3 flex gap-3">
-            <a href="#" className="rounded-full bg-softBg px-3 py-1 text-xs font-semibold text-primaryDark hover:bg-accent">Instagram</a>
+            <a href="https://www.instagram.com/gadkilleofficial/?hl=en" className="rounded-full bg-softBg px-3 py-1 text-xs font-semibold text-primaryDark hover:bg-accent">Instagram</a>
             <a href="#" className="rounded-full bg-softBg px-3 py-1 text-xs font-semibold text-primaryDark hover:bg-accent">YouTube</a>
           </div>
         </div>

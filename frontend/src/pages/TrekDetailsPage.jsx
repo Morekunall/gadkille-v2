@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import SeoHead from '../components/seo/SeoHead';
 import { breadcrumbJsonLd, getDefaultOgImage, trekJsonLd } from '../lib/seo';
 import { formatInr, getOriginalPrice } from '../lib/trekPricing';
+import CrossedPrice from '../components/treks/CrossedPrice';
 
 const PLACEHOLDER =
   'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=1200';
@@ -133,7 +134,7 @@ const TrekDetailsPage = () => {
   });
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
       <SeoHead
         title={`${trek.title} — Upcoming Trek`}
         description={
@@ -225,24 +226,22 @@ const TrekDetailsPage = () => {
             {isEnglish ? 'Book this trek' : 'हा ट्रेक बुक करा'}
           </h2>
           <dl className="mt-3 space-y-2 text-sm text-gray-600">
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
               <dt>{isEnglish ? 'Date' : 'तारीख'}</dt>
-              <dd className="font-medium text-primaryDark">{startDate}</dd>
+              <dd className="font-medium text-primaryDark sm:max-w-[60%] sm:text-right">{startDate}</dd>
             </div>
             <div className="flex justify-between">
               <dt>{isEnglish ? 'Duration' : 'कालावधी'}</dt>
               <dd className="font-medium text-primaryDark">{trek.duration}</dd>
             </div>
-            <div className="flex justify-between items-baseline">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
               <dt>{isEnglish ? 'Price' : 'किंमत'}</dt>
-              <dd className="font-medium text-primaryDark text-right">
-                {originalPrice ? (
-                  <span className="mr-2 text-sm text-red-500 line-through decoration-red-500 decoration-2">
-                    ₹{formatInr(originalPrice)}
-                  </span>
-                ) : null}
-                ₹{formatInr(trek.pricePerPerson)}
-                {isEnglish ? ' / person' : ' / व्यक्ती'}
+              <dd className="flex flex-wrap items-baseline gap-x-2 gap-y-1 font-medium text-primaryDark sm:justify-end sm:text-right">
+                {originalPrice ? <CrossedPrice amount={originalPrice} size="sm" /> : null}
+                <span>
+                  ₹{formatInr(trek.pricePerPerson)}
+                  {isEnglish ? ' / person' : ' / व्यक्ती'}
+                </span>
               </dd>
             </div>
             {trek.seatsAvailable > 0 && (

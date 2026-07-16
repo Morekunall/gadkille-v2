@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { resolveMediaUrl } from '../../lib/api';
 import { formatInr, getOriginalPrice } from '../../lib/trekPricing';
+import CrossedPrice from './CrossedPrice';
 
 const PLACEHOLDER =
   'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=800';
@@ -43,13 +44,15 @@ export default function UpcomingTrekCard({ trek, language = 'en' }) {
       />
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold text-primaryDark">{trek?.title}</h3>
+          <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-primaryDark line-clamp-2 sm:text-lg">
+            {trek?.title}
+          </h3>
           <span className="shrink-0 rounded-full bg-softBg px-2 py-0.5 text-[10px] font-semibold text-primary">
             {isEnglish ? typeLabel.en : typeLabel.mr}
           </span>
         </div>
         {trek?.fort?.name ? (
-          <p className="mt-0.5 text-xs font-medium text-primary/80">
+          <p className="mt-0.5 text-xs font-medium text-primary/80 line-clamp-1">
             {trek.fort.name}
             {trek.fort.location ? ` · ${trek.fort.location}` : ''}
           </p>
@@ -60,13 +63,11 @@ export default function UpcomingTrekCard({ trek, language = 'en' }) {
         <p className="mt-1 text-sm text-gray-600 line-clamp-2">
           {trek?.description || (isEnglish ? 'Join this guided fort trek.' : 'या मार्गदर्शित किल्ला ट्रेकमध्ये सामील व्हा.')}
         </p>
-        <div className="mt-3 flex items-center justify-between">
-          <div>
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               {originalPrice ? (
-                <span className="text-xs font-medium text-red-500 line-through decoration-red-500 decoration-2">
-                  ₹{formatInr(originalPrice)}
-                </span>
+                <CrossedPrice amount={originalPrice} size="xs" />
               ) : null}
               <p className="text-sm font-semibold text-primaryDark">
                 ₹{formatInr(trek?.pricePerPerson)}
@@ -85,7 +86,7 @@ export default function UpcomingTrekCard({ trek, language = 'en' }) {
           </div>
           <Link
             to={`/trek/${trek?.slug}`}
-            className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primaryDark"
+            className="inline-flex shrink-0 items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primaryDark sm:px-3 sm:py-1.5"
           >
             {isEnglish ? 'Book Now' : 'बुक करा'}
           </Link>

@@ -3,6 +3,7 @@ import { submitInquiry } from '../api/inquiries';
 import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { useForts } from '../hooks/useForts';
 import { useUi } from '../context/UiContext';
+import SeoHead from '../components/seo/SeoHead';
 
 const initialForm = {
   tripType: 'solo',
@@ -94,6 +95,11 @@ const PlanTripPage = () => {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
+      <SeoHead
+        title="Plan Your Fort Trip"
+        description="Plan solo, family, or group fort trips with GadKille. Submit your travel details and get curated routes, stays, and guide support across Maharashtra."
+        path="/plan-trip"
+      />
       {fetchError && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {fetchError}

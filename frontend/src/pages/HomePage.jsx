@@ -10,12 +10,14 @@ import { useForts } from '../hooks/useForts';
 import { useAuthOAuthCallback } from '../hooks/useAuthOAuthCallback';
 import { useUi } from '../context/UiContext';
 import VideoModal from '../components/VideoModal';
+import SeoHead from '../components/seo/SeoHead';
+import { DEFAULT_DESCRIPTION, organizationJsonLd, websiteJsonLd } from '../lib/seo';
 import heroImage from '../assets/gad-yatra-hero.png';
 
 const groupTours = [
   { title: 'School Trips', image: 'https://images.pexels.com/photos/8423393/pexels-photo-8423393.jpeg' },
-  { title: 'Family Trips', image: 'https://images.pexels.com/photos/1287142/pexels-photo-1287142.jpeg' },
-  { title: "Friends' Treks", image: 'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg' }
+  { title: 'Family Trips', image: 'https://res.cloudinary.com/dzp8nhkxa/image/upload/v1781864236/outdoor-photo-asian-family-beautiful-260nw-2557760803_kobqyo.png' },
+  { title: "Friends' Treks", image: 'https://res.cloudinary.com/dzp8nhkxa/image/upload/v1781863891/360_F_623491006_8THGbPv1rlNcxKeiF84yPl4MOlogx4mC_ds349v.jpg' }
 ];
 
 const testimonials = [
@@ -82,6 +84,12 @@ const HomePage = () => {
 
   return (
     <div className="bg-softBg text-primaryDark">
+      <SeoHead
+        title="GadKille — Official Website | Maharashtra Fort Tourism & Trek Booking"
+        description={DEFAULT_DESCRIPTION}
+        path="/"
+        jsonLd={[organizationJsonLd(), websiteJsonLd()]}
+      />
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
@@ -93,7 +101,8 @@ const HomePage = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-primaryDark/85 via-primaryDark/70 to-primary/45" />
         <div className="relative mx-auto flex max-w-6xl flex-col gap-8 px-4 py-20 text-white md:py-24">
-          <h1 className="max-w-2xl text-4xl font-bold leading-tight md:text-6xl">
+          <p className="sr-only">GadKille official website — Maharashtra fort tourism, trek booking, and trip planning</p>
+          <h1 className="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl md:text-6xl">
             {isEnglish ? 'Explore Forts Like Never Before' : 'किल्ले यापूर्वी कधीच न पाहिल्यासारखे एक्सप्लोर करा'}
           </h1>
           <p className="max-w-2xl text-sm text-slate-100 md:text-base">
