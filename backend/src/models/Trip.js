@@ -12,6 +12,7 @@ const tripSchema = new mongoose.Schema(
     },
     duration: { type: String, required: true },
     pricePerPerson: { type: Number, required: true, min: 0 },
+    originalPrice: { type: Number, min: 0 },
     seatsAvailable: { type: Number, default: 0, min: 0 },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

@@ -6,6 +6,9 @@ import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { resolveMediaUrl } from '../lib/api';
 import { useUi } from '../context/UiContext';
 import { useAuth } from '../context/AuthContext';
+import SeoHead from '../components/seo/SeoHead';
+import { breadcrumbJsonLd, getDefaultOgImage, trekJsonLd } from '../lib/seo';
+import { formatInr, getOriginalPrice } from '../lib/trekPricing';
 
 const PLACEHOLDER =
   'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=1200';
@@ -92,6 +95,11 @@ const TrekDetailsPage = () => {
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
+        <SeoHead
+          title="Upcoming Trek"
+          description="Book upcoming fort treks and group events on GadKille — Maharashtra's fort tourism website."
+          path={`/trek/${slug}`}
+        />
         <div className="h-64 animate-pulse rounded-3xl bg-white shadow-soft" />
       </div>
     );
@@ -100,6 +108,7 @@ const TrekDetailsPage = () => {
   if (!trek) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 text-center">
+        <SeoHead title="Trek Not Found" noindex path={`/trek/${slug}`} />
         <h1 className="text-xl font-semibold text-primaryDark">
           {isEnglish ? 'Trek not found' : 'ट्रेक सापडला नाही'}
         </h1>
@@ -115,6 +124,7 @@ const TrekDetailsPage = () => {
     resolveMediaUrl(trek.fort?.images?.[0] || '') ||
     PLACEHOLDER;
   const totalPrice = (trek.pricePerPerson || 0) * guests;
+  const originalPrice = getOriginalPrice(trek);
   const startDate = new Date(trek.startDate).toLocaleDateString(isEnglish ? 'en-IN' : 'mr-IN', {
     weekday: 'long',
     day: 'numeric',
@@ -124,6 +134,23 @@ const TrekDetailsPage = () => {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
+      <SeoHead
+        title={`${trek.title} — Upcoming Trek`}
+        description={
+          trek.description ||
+          `Book ${trek.title} on GadKille. ${trek.duration || ''} fort trek with dates, pricing, and seats.`
+        }
+        path={`/trek/${trek.slug}`}
+        image={imageUrl || getDefaultOgImage()}
+        type="article"
+        jsonLd={[
+          trekJsonLd(trek),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: trek.title, path: `/trek/${trek.slug}` }
+          ])
+        ]}
+      />
       {loginPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
@@ -206,10 +233,15 @@ const TrekDetailsPage = () => {
               <dt>{isEnglish ? 'Duration' : 'कालावधी'}</dt>
               <dd className="font-medium text-primaryDark">{trek.duration}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-baseline">
               <dt>{isEnglish ? 'Price' : 'किंमत'}</dt>
-              <dd className="font-medium text-primaryDark">
-                ₹{trek.pricePerPerson?.toLocaleString('en-IN')}
+              <dd className="font-medium text-primaryDark text-right">
+                {originalPrice ? (
+                  <span className="mr-2 text-sm text-red-500 line-through decoration-red-500 decoration-2">
+                    ₹{formatInr(originalPrice)}
+                  </span>
+                ) : null}
+                ₹{formatInr(trek.pricePerPerson)}
                 {isEnglish ? ' / person' : ' / व्यक्ती'}
               </dd>
             </div>

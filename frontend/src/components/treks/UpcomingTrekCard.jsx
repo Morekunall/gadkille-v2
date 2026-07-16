@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { resolveMediaUrl } from '../../lib/api';
+import { formatInr, getOriginalPrice } from '../../lib/trekPricing';
 
 const PLACEHOLDER =
   'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=800';
@@ -30,6 +31,7 @@ export default function UpcomingTrekCard({ trek, language = 'en' }) {
     resolveMediaUrl(trek?.fort?.images?.[0] || '') ||
     PLACEHOLDER;
   const typeLabel = TRIP_TYPE_LABELS[trek?.tripType] || TRIP_TYPE_LABELS.weekend;
+  const originalPrice = getOriginalPrice(trek);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-primary/10 bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md">
@@ -60,12 +62,19 @@ export default function UpcomingTrekCard({ trek, language = 'en' }) {
         </p>
         <div className="mt-3 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-primaryDark">
-              ₹{trek?.pricePerPerson?.toLocaleString('en-IN')}
-              <span className="text-xs font-normal text-gray-500">
-                {isEnglish ? ' / person' : ' / व्यक्ती'}
-              </span>
-            </p>
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              {originalPrice ? (
+                <span className="text-xs font-medium text-red-500 line-through decoration-red-500 decoration-2">
+                  ₹{formatInr(originalPrice)}
+                </span>
+              ) : null}
+              <p className="text-sm font-semibold text-primaryDark">
+                ₹{formatInr(trek?.pricePerPerson)}
+                <span className="text-xs font-normal text-gray-500">
+                  {isEnglish ? ' / person' : ' / व्यक्ती'}
+                </span>
+              </p>
+            </div>
             {trek?.seatsAvailable > 0 && (
               <p className="text-[10px] text-gray-500">
                 {isEnglish

@@ -7,6 +7,7 @@ import {
 } from '../api/trips';
 import { getApiErrorMessage } from '../lib/getApiErrorMessage';
 import { isUsingProductionApi, resolveMediaUrl } from '../lib/api';
+import { formatInr, getOriginalPrice } from '../lib/trekPricing';
 
 const TRIP_TYPES = ['weekend', 'one-day', 'school', 'family', 'friends', 'adventure'];
 
@@ -18,6 +19,7 @@ const initialForm = {
   tripType: 'weekend',
   duration: '',
   pricePerPerson: '',
+  originalPrice: '',
   seatsAvailable: '',
   startDate: '',
   endDate: '',
@@ -76,6 +78,7 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
       tripType: trek.tripType || 'weekend',
       duration: trek.duration || '',
       pricePerPerson: trek.pricePerPerson ?? '',
+      originalPrice: trek.originalPrice ?? '',
       seatsAvailable: trek.seatsAvailable ?? '',
       startDate: trek.startDate ? String(trek.startDate).slice(0, 10) : '',
       endDate: trek.endDate ? String(trek.endDate).slice(0, 10) : '',
@@ -98,6 +101,7 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
       tripType: trek.tripType || 'weekend',
       duration: trek.duration || '',
       pricePerPerson: trek.pricePerPerson ?? '',
+      originalPrice: trek.originalPrice ?? '',
       seatsAvailable: trek.seatsAvailable ?? '',
       startDate: trek.startDate ? String(trek.startDate).slice(0, 10) : '',
       endDate: trek.endDate ? String(trek.endDate).slice(0, 10) : '',
@@ -132,6 +136,11 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
 
     setSaving(true);
     try {
+      const requestedOriginalPrice =
+        trekForm.originalPrice !== '' && trekForm.originalPrice != null
+          ? Number(trekForm.originalPrice)
+          : null;
+
       const payload = {
         title: trekForm.title.trim(),
         slug: normalizedSlug,
@@ -153,6 +162,12 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
         featuredOrder: Number(trekForm.featuredOrder) || 0,
       };
 
+      if (requestedOriginalPrice) {
+        payload.originalPrice = requestedOriginalPrice;
+      } else if (trekForm._id) {
+        payload.originalPrice = null;
+      }
+
       const saved = trekForm._id
         ? await updateTrek(String(trekForm._id), payload)
         : await createTrek(payload);
@@ -165,6 +180,18 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
             language === 'en'
               ? 'Cover image was not saved. Deploy the latest backend on Render, then update again.'
               : 'कव्हर इमेज सेव्ह झाली नाही. Render वर नवीन backend deploy करा आणि पुन्हा अपडेट करा.'
+          );
+          return;
+        }
+        if (
+          requestedOriginalPrice &&
+          Number(saved.originalPrice) !== requestedOriginalPrice
+        ) {
+          showToast(
+            'error',
+            language === 'en'
+              ? 'Original price was not saved. Deploy the latest backend on Render (with originalPrice support), then save again.'
+              : 'मूळ किंमत सेव्ह झाली नाही. Render वर नवीन backend deploy करा आणि पुन्हा सेव्ह करा.'
           );
           return;
         }
@@ -245,8 +272,8 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
           {isUsingProductionApi() && (
             <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-950">
               {language === 'en'
-                ? 'Live API (Render): cover image & homepage toggle need the latest backend deployed. Push your code and redeploy Render, then update the trek again.'
-                : 'लाइव API (Render): कव्हर इमेज आणि होमपेज टॉगलसाठी नवीन backend deploy करावा लागेल.'}
+                ? 'Live API (Render): cover image, original price & homepage toggle need the latest backend deployed. Push backend changes and redeploy Render, then save the trek again.'
+                : 'लाइव API (Render): कव्हर इमेज, मूळ किंमत आणि होमपेज टॉगलसाठी नवीन backend deploy करावा लागेल.'}
             </p>
           )}
         </div>
@@ -334,6 +361,19 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
             min={0}
             value={trekForm.pricePerPerson}
             onChange={(e) => setTrekForm((p) => ({ ...p, pricePerPerson: e.target.value }))}
+            className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] text-gray-700">
+            {language === 'en' ? 'Original price (₹, optional)' : 'मूळ किंमत (₹, ऐच्छिक)'}
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={trekForm.originalPrice}
+            onChange={(e) => setTrekForm((p) => ({ ...p, originalPrice: e.target.value }))}
+            placeholder={language === 'en' ? 'e.g. 1500 — shown crossed out' : 'उदा. 1500 — ओलसर रेषेसह'}
             className="w-full rounded-xl border border-gray-200 bg-softBg px-3 py-2 focus:border-primary focus:outline-none"
           />
         </div>
@@ -492,8 +532,11 @@ const UpcomingTreksTab = ({ language, showToast, forts }) => {
               <div>
                 <p className="font-semibold text-primaryDark">{trek.title}</p>
                 <p className="text-[10px] text-gray-600">
-                  {trek.fort?.name || 'Fort'} · {new Date(trek.startDate).toLocaleDateString()} · ₹
-                  {trek.pricePerPerson}
+                  {trek.fort?.name || 'Fort'} · {new Date(trek.startDate).toLocaleDateString()} ·{' '}
+                  {getOriginalPrice(trek) ? (
+                    <span className="text-red-500 line-through">₹{formatInr(getOriginalPrice(trek))}</span>
+                  ) : null}{' '}
+                  ₹{formatInr(trek.pricePerPerson)}
                 </p>
                 <p className="text-[10px] text-gray-500">
                   {trek.isPublished

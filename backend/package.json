@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "seed:visapur": "node src/seeds/seedVisapur.js",
     "seed:admin": "node src/seeds/seedAdmin.js",
-    "reset:ownership": "node src/scripts/resetOwnershipData.js"
+    "reset:ownership": "node src/scripts/resetOwnershipData.js",
+    "patch:trek-price": "node src/scripts/patchTrekOriginalPrice.js",
+    "patch:trek-price:api": "node src/scripts/patchTrekOriginalPriceViaApi.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

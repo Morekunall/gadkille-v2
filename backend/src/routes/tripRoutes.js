@@ -60,19 +60,29 @@ router.get('/:slug', async (req, res) => {
 
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { title, slug, fort, duration, pricePerPerson, startDate, endDate } = req.body;
+    const payload = buildTripPayload(req.body);
+    const { title, slug, fort, duration, pricePerPerson, startDate, endDate } = payload;
     if (!title || !slug || !fort || !duration || !pricePerPerson || !startDate || !endDate) {
       return res.status(400).json({ message: 'Required fields are missing' });
     }
     const exists = await Trip.findOne({ slug });
     if (exists) return res.status(400).json({ message: 'Slug already exists' });
-    const trip = await Trip.create(req.body);
+    const trip = await Trip.create(payload);
     const populated = await Trip.findById(trip._id).populate(populateFort);
     res.status(201).json(populated);
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+const parseOriginalPrice = (value) => {
+  if (value === '' || value == null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
 
 const buildTripPayload = (body) => {
   const payload = {};
@@ -86,6 +96,7 @@ const buildTripPayload = (body) => {
   assign('tripType');
   assign('duration', (v) => String(v).trim());
   assign('pricePerPerson', (v) => Number(v));
+  assign('originalPrice', parseOriginalPrice);
   assign('seatsAvailable', (v) => Number(v));
   assign('startDate');
   assign('endDate');
@@ -102,6 +113,23 @@ const buildTripPayload = (body) => {
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
     const payload = buildTripPayload(req.body);
+    const update = {};
+
+    if (Object.keys(payload).length > 0) {
+      update.$set = payload;
+    }
+
+    if (req.body.originalPrice === '' || req.body.originalPrice === null) {
+      update.$unset = { originalPrice: 1 };
+      if (update.$set?.originalPrice !== undefined) {
+        delete update.$set.originalPrice;
+      }
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
     if (payload.slug) {
       const conflict = await Trip.findOne({
         slug: payload.slug,
@@ -112,7 +140,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
       }
     }
 
-    const trip = await Trip.findByIdAndUpdate(req.params.id, payload, {
+    const trip = await Trip.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
       overwrite: false,
