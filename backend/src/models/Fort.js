@@ -65,6 +65,7 @@ const fortSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true },
     location: { type: String, required: true },
+    district: { type: String, trim: true, default: '' },
     history: String,
     description: String,
     images: [String],

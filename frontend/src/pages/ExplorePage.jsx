@@ -1,6 +1,4 @@
-import { useMemo } from 'react';
-import FortGrid from '../components/forts/FortGrid';
-import { useForts } from '../hooks/useForts';
+import FortExplorer from '../components/forts/FortExplorer';
 import { useUi } from '../context/UiContext';
 import SeoHead from '../components/seo/SeoHead';
 
@@ -70,29 +68,9 @@ const journeyMedia = [
   }
 ];
 
-const normalizeRegion = (location) => {
-  if (!location) return 'Other';
-  const text = location.toLowerCase();
-  if (text.includes('pune')) return 'Pune Region';
-  if (text.includes('visapur') || text.includes('lohgad')) return 'Pune Region';
-  if (text.includes('nashik')) return 'Nashik Region';
-  if (text.includes('satara')) return 'Satara Region';
-  return 'Other';
-};
-
 const ExplorePage = () => {
   const { language } = useUi();
-  const { forts, loading, error: fetchError } = useForts();
   const isEnglish = language === 'en';
-
-  const groupedForts = useMemo(() => {
-    return forts.reduce((acc, fort) => {
-      const key = normalizeRegion(fort.location);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(fort);
-      return acc;
-    }, {});
-  }, [forts]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -101,38 +79,18 @@ const ExplorePage = () => {
         description="Browse forts by region on GadKille — routes, history, stays, guides, and trek details for Lohagad, Visapur, Ramshej, and more."
         path="/explore"
       />
-      {fetchError && (
-        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {fetchError}
-        </div>
-      )}
       <section className="rounded-3xl bg-white p-6 shadow-soft">
         <h1 className="text-2xl font-semibold text-primaryDark">
           {isEnglish ? 'Explore Forts' : 'किल्ले एक्सप्लोर करा'}
         </h1>
         <p className="mt-2 text-sm text-gray-600">
           {isEnglish
-            ? 'Browse forts grouped by region and start your next trip.'
-            : 'प्रांतानुसार किल्ले पाहा आणि पुढच्या प्रवासाची सुरुवात करा.'}
+            ? 'Search 350+ forts by district — filter, browse, and plan your next trek without the scroll overload.'
+            : '३५०+ किल्ले जिल्ह्यानुसार शोधा — गोंधळ न करता सहज फिल्टर करा आणि पुढचा ट्रेक निवडा.'}
         </p>
 
-        <div className="mt-6 space-y-8">
-          {Object.entries(groupedForts).map(([region, items]) => (
-            <div key={region}>
-              <h2 className="text-lg font-semibold text-primaryDark">{region}</h2>
-              <div className="mt-3">
-                <FortGrid
-                  forts={items}
-                  loading={loading}
-                  language={language}
-                  skeletonCount={items.length || 3}
-                />
-              </div>
-            </div>
-          ))}
-          {!loading && forts.length === 0 && (
-            <FortGrid forts={[]} loading={false} language={language} />
-          )}
+        <div className="mt-6">
+          <FortExplorer language={language} />
         </div>
       </section>
 

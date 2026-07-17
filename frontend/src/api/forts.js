@@ -5,6 +5,19 @@ export async function getForts(config) {
   return res.data;
 }
 
+export async function searchForts({ q, district, page = 1, limit = 12 } = {}, config) {
+  const params = { page, limit };
+  if (q?.trim()) params.q = q.trim();
+  if (district && district !== 'all') params.district = district;
+  const res = await api.get('/forts', { params, ...config });
+  return res.data;
+}
+
+export async function getFortDistricts(config) {
+  const res = await api.get('/forts/meta/districts', config);
+  return res.data;
+}
+
 export async function getFortBySlug(slug, config) {
   const res = await api.get(`/forts/${slug}`, config);
   return res.data;

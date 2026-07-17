@@ -165,7 +165,30 @@ const HomePage = () => {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8">
-        <h2 className="text-2xl font-semibold text-primaryDark">{isEnglish ? 'Popular Forts' : 'लोकप्रिय किल्ले'}</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-primaryDark">
+              {isEnglish ? 'Popular Forts' : 'लोकप्रिय किल्ले'}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              {isEnglish
+                ? forts.length > 6
+                  ? `Hand-picked highlights from ${forts.length}+ forts across Maharashtra.`
+                  : 'Featured forts to start your next trek.'
+                : forts.length > 6
+                ? `महाराष्ट्रातील ${forts.length}+ किल्ल्यांपैकी निवडलेले ठळक किल्ले.`
+                : 'पुढच्या ट्रेकसाठी निवडलेले किल्ले.'}
+            </p>
+          </div>
+          {forts.length > 6 ? (
+            <Link
+              to="/explore"
+              className="inline-flex shrink-0 items-center justify-center rounded-full border border-primary/20 bg-white px-4 py-2 text-sm font-semibold text-primary shadow-soft transition hover:border-primary hover:bg-softBg"
+            >
+              {isEnglish ? `Browse all ${forts.length} forts →` : `सर्व ${forts.length} किल्ले पहा →`}
+            </Link>
+          ) : null}
+        </div>
         {(fetchError || fortsError) && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {fetchError || fortsError}
