@@ -62,9 +62,16 @@ const envTrim = (key) => {
   return v.trim().replace(/^\uFEFF/, '').replace(/\uFEFF/g, '');
 };
 
+const PRODUCTION_GOOGLE_REDIRECT_URI =
+  'https://api.gadkille.co.in/api/auth/google/callback';
+
 const getGoogleRedirectUri = (req) => {
   const fromEnv = envTrim('GOOGLE_REDIRECT_URI');
   if (fromEnv) return fromEnv;
+
+  if (process.env.NODE_ENV === 'production') {
+    return PRODUCTION_GOOGLE_REDIRECT_URI;
+  }
 
   const forwardedProto = req.headers['x-forwarded-proto'];
   const protocol = forwardedProto || req.protocol || 'https';
