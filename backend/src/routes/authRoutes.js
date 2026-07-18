@@ -65,6 +65,31 @@ const envTrim = (key) => {
 const PRODUCTION_GOOGLE_REDIRECT_URI =
   'https://api.gadkille.co.in/api/auth/google/callback';
 
+const getReturnUrlFromRequest = (req) => {
+  const raw = req.query?.returnTo;
+  const candidate = Array.isArray(raw) ? raw[0] : raw;
+  if (candidate && typeof candidate === 'string') {
+    try {
+      const decoded = decodeURIComponent(candidate.trim());
+      const allowedOrigins = [
+        frontendUrl(),
+        process.env.FRONTEND_URL,
+        process.env.CLIENT_URL,
+        ...(process.env.CORS_ORIGINS || '').split(','),
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().replace(/\/$/, ''));
+
+      if (allowedOrigins.some((origin) => decoded === origin || decoded.startsWith(`${origin}/`))) {
+        return decoded.replace(/\/$/, '');
+      }
+    } catch {
+      // ignore malformed returnTo
+    }
+  }
+  return frontendUrl();
+};
+
 const getGoogleRedirectUri = (req) => {
   const fromEnv = envTrim('GOOGLE_REDIRECT_URI');
   if (fromEnv) return fromEnv;
@@ -581,7 +606,7 @@ router.get('/google', (req, res) => {
   } catch (error) {
     console.error('Google OAuth config error:', error.message);
     const returnBase = getReturnUrlFromRequest(req);
-    res.redirect(`${returnBase}/login?error=google_auth_not_configured`);
+    res.redirect(`${returnBase}/?error=google_auth_not_configured`);
   }
 });
 
@@ -589,7 +614,7 @@ router.get('/google', (req, res) => {
 router.get('/google/callback', async (req, res) => {
   const fail = (code, logMsg, extra) => {
     if (logMsg) console.error('[Google OAuth]', logMsg, extra ?? '');
-    return res.redirect(`${frontendUrl()}/login?error=${code}`);
+    return res.redirect(`${frontendUrl()}/?error=${code}`);
   };
 
   try {
@@ -675,7 +700,7 @@ router.get('/google/callback', async (req, res) => {
 
     const jwtToken = generateToken(user);
     console.log('[Google OAuth] ✅ Login successful for:', user.email);
-    const redirectUrl = `${frontendUrl()}/login?token=${encodeURIComponent(jwtToken)}`;
+    const redirectUrl = `${frontendUrl()}/?token=${encodeURIComponent(jwtToken)}`;
     console.log('[Google OAuth] Redirecting to:', redirectUrl.substring(0, 50) + '...');
     res.redirect(redirectUrl);
   } catch (error) {

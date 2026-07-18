@@ -2,21 +2,30 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUi } from '../context/UiContext';
+import { getGoogleErrorMessage } from '../lib/oauthErrors';
 
 /**
- * Handles ?token= from Google OAuth redirect on any page.
+ * Handles ?token= and ?error= from Google OAuth redirect on any page.
  */
 export function useAuthOAuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { authenticateWithToken } = useAuth();
-  const { showToast } = useUi();
+  const { showToast, language } = useUi();
   const handled = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
-    if (!token || handled.current) return;
+    const error = searchParams.get('error');
+
+    if ((!token && !error) || handled.current) return;
     handled.current = true;
+
+    if (error) {
+      showToast('error', getGoogleErrorMessage(error, language));
+      navigate('/login', { replace: true });
+      return;
+    }
 
     (async () => {
       const user = await authenticateWithToken(token);
@@ -37,5 +46,5 @@ export function useAuthOAuthCallback() {
       showToast('error', `Google sign-in could not be completed.${hint} Please try again.`);
       navigate('/login', { replace: true });
     })();
-  }, [searchParams, navigate, authenticateWithToken, showToast]);
+  }, [searchParams, navigate, authenticateWithToken, showToast, language]);
 }

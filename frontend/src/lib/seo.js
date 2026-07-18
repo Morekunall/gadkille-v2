@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = 'https://gadkille.co';
+const DEFAULT_SITE_URL = 'https://gadkille.co.in';
 
 export const SITE_NAME = 'GadKille';
 export const SITE_TAGLINE = 'Fort exploration and trip planning in Maharashtra';

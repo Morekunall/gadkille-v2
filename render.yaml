@@ -1,4 +1,5 @@
-# Render Static Site — set Root Directory to "frontend" in dashboard if using monorepo
+# GadKille monorepo — Render Blueprint (frontend static site)
+# Backend: configure separately as a Web Service pointing to backend/
 services:
   - type: web
     name: gadkille-frontend

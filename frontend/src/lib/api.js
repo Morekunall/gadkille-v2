@@ -1,4 +1,4 @@
-export const PRODUCTION_API_ORIGIN = 'https://gadkille-backend-clean.onrender.com';
+export const PRODUCTION_API_ORIGIN = 'https://api.gadkille.co.in';
 const PRODUCTION_API = `${PRODUCTION_API_ORIGIN}/api`;
 
 /** Same host that issues Google OAuth tokens (must match GOOGLE_REDIRECT_URI backend). */
@@ -47,7 +47,8 @@ export function resolveMediaUrl(path) {
 
 export function getGoogleAuthUrl() {
   const returnTo = encodeURIComponent(window.location.origin);
-  return `${getOAuthApiOrigin()}/api/auth/google?returnTo=${returnTo}`;
+  const apiBase = getApiBaseUrl().replace(/\/$/, '');
+  return `${apiBase}/auth/google?returnTo=${returnTo}`;
 }
 
 /** Human-readable API target (login + forts use the same server). */
@@ -61,5 +62,6 @@ export function getApiConnectionLabel() {
 }
 
 export function isUsingProductionApi() {
-  return getApiBaseUrl().includes('onrender.com');
+  const base = getApiBaseUrl();
+  return base.includes('onrender.com') || base.includes('gadkille.co.in');
 }

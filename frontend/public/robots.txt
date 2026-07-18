@@ -9,4 +9,4 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /complete-profile
 
-Sitemap: https://gadkille.co/sitemap.xml
+Sitemap: https://gadkille.co.in/sitemap.xml

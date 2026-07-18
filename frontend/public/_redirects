@@ -1,1 +1,7 @@
 /*    /index.html   200
+/login    /index.html   200
+/explore  /index.html   200
+/admin    /index.html   200
+/dashboard    /index.html   200
+/fort/*    /index.html   200
+/trek/*    /index.html   200

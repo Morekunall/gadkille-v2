@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthModal from '../components/auth/AuthModal';
 import { getHistories } from '../api/history';
 import { getUpcomingTreks } from '../api/trips';
@@ -7,7 +7,6 @@ import { resolveMediaUrl } from '../lib/api';
 import FortGrid from '../components/forts/FortGrid';
 import UpcomingTrekCard from '../components/treks/UpcomingTrekCard';
 import { useForts } from '../hooks/useForts';
-import { useAuthOAuthCallback } from '../hooks/useAuthOAuthCallback';
 import { useUi } from '../context/UiContext';
 import VideoModal from '../components/VideoModal';
 import SeoHead from '../components/seo/SeoHead';
@@ -29,9 +28,7 @@ const testimonials = [
 const HomePage = () => {
   const { language } = useUi();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
-  useAuthOAuthCallback();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { forts, loading: fortsLoading, error: fortsError } = useForts();
   const [histories, setHistories] = useState([]);

@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import SeoHead from '../seo/SeoHead';
+import { useAuthOAuthCallback } from '../../hooks/useAuthOAuthCallback';
 import { useUi } from '../../context/UiContext';
 
 const NOINDEX_PATHS = [
@@ -15,6 +16,7 @@ const NOINDEX_PATHS = [
 ];
 
 const Layout = () => {
+  useAuthOAuthCallback();
   const { toast } = useUi();
   const { pathname } = useLocation();
   const isPrivatePage = NOINDEX_PATHS.some(
